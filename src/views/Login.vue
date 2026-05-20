@@ -8,7 +8,7 @@
         <img
           src="/img/5017953.jpg"
           alt="Login Illustration"
-          class="w-full h-full object-cover"
+          class="w-full h-full object-contain"
         />
       </div>
 
@@ -37,11 +37,11 @@
           class="w-full max-w-sm"
         >
           <label>
-            <h2 class="capitalize font-semibold tracking-wider">Staff ID</h2>
+            <h2 class="capitalize font-semibold tracking-wider">User ID</h2>
           </label>
           <a-input
             v-model:value="data.user_id"
-            placeholder="Staff ID"
+            placeholder="User ID"
             class="border border-gray-300 rounded-lg mb-3"
           />
 
