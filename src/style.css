@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ensure styles apply with proper specificity */
+html {
+  scrollbar-width: thin; /* Firefox: Thin scrollbar */
+  scrollbar-color: #aaa #f5f5f5; /* Thumb and track colors */
+}
+
+body {
+  margin: 0; /* Remove default margin */
+}
+
+/* Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 12px; /* Scrollbar width */
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #aaa !important; /* Scrollbar thumb background */
+  border-radius: 6px; /* Rounded corners */
+  border: 2px solid #f5f5f5; /* Add space between thumb and track */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #888; /* Hover color */
+}
+
+.ant-layout-sider-has-trigger {
+  flex: 0 0 300px !important;
+  max-width: 300px !important;
+  min-width: 300px !important;
+  width: 300px !important;
+}
+
+.ant-layout-sider-has-trigger .ant-layout-sider-trigger {
+  width: 100px !important;
+}
+
+.ant-layout-sider-children{
+  min-height: 170vh;
+}
+
+.ant-layout-sider-collapsed {
+  flex: 0 0 100px !important;
+  max-width:100px !important;
+  min-width:100px !important;
+  width:100px !important;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #f5f5f5 !important; /* Track background */
+  border-left: 1px solid #ddd; /* Fix the border */
+}
+
+/* Optional: For the scrollbar border issue */
+body {
+  border-right: 1px solid #ddd; /* Add matching border */
+}
+
+/* input{
+  border-color: #292e66 !important;
+} */
+
+.ant-menu.ant-menu-root {
+  background: transparent;
+  background-size: cover !important;
+  color: #fff !important;
+}
+
+.ant-layout-sider.ant-layout-sider-dark {
+  color: #2d2d61 !important;
+}
+
+/* body {
+  background: #292e66 !important;
+  background-size: cover !important;
+} */
+
+.ant-layout-sider-trigger {
+  background: #292e66 !important;
+  color: #fff !important;
+}
+
+:where(.css-dev-only-do-not-override-1p3hq3p).ant-menu-dark.ant-menu-inline
+  .ant-menu-sub.ant-menu-inline {
+  background: transparent !important;
+}
+
+.ant-menu-root {
+  padding: 0px 4px;
+}
+
+aside .ant-menu-item:hover {
+  background-color: #024f97 !important;
+}
+.ant-btn-primary {
+  background-color: #4040a4;
+}
+.edit-btn {
+  background-color: #bfdbfe !important;
+}
+
+
+.ant-menu-item .ant-menu-item-only-child {
+  padding-left: 70px !important;
+}
+
+/* breakpoint */
+
+@media (max-width: 991.98px) {
+  .ant-layout-sider {
+    display: none;
+  }
+}
+
+@media (min-width: 992px) {
+  .ant-layout-header {
+    display: none;
+  }
+  .main {
+    padding: 20px;
+  }
+  /* main {
+    background: url("@/assets/images/loginbg.png") no-repeat center center !important;
+    background-size: cover !important;
+  } */
+}
