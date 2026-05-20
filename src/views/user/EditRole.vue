@@ -1,9 +1,10 @@
 <script setup>
-import { ref, reactive, watch, onMounted } from "vue";
+import { ref, reactive, onMounted } from "vue";
 import axios from "axios";
 import Cookies from "js-cookie";
 import MainLayout from "@/components/layout/MainLayout.vue";
 import { apiBase } from "@/config";
+import { showNotification } from "@/utilities/notification";
 
 import { useRoute, useRouter } from "vue-router";
 
@@ -38,6 +39,8 @@ const addOrUpdateRole = async () => {
     const token = Cookies.get("token");
     const config = {
       headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
     };
@@ -46,8 +49,6 @@ const addOrUpdateRole = async () => {
       name: form.name,
       permission: form.permission,
     };
-
-    console.log("Payload:", payload);
 
     let res;
     if (roleId.value) {
@@ -61,12 +62,14 @@ const addOrUpdateRole = async () => {
     }
 
     if (res.status === 200 || res.status === 201) {
+      showNotification("Success", res?.data?.message || "Role saved");
       router.push({ name: "user-role" });
     } else {
-      console.error(res.data.message);
+      showNotification("Error", res?.data?.message || "An error occurred");
     }
   } catch (err) {
     console.error(err);
+    showNotification("Error", err?.message || "Something went wrong");
   } finally {
     isLoading.value = false;
   }

@@ -162,6 +162,7 @@ const getPermission = async () => {
   const token = Cookies.get("token");
   const config = {
     headers: {
+      Accept: "application/json",
       Authorization: `Bearer ${token}`,
     },
   };
@@ -170,25 +171,36 @@ const getPermission = async () => {
     if (response?.status == 200 && response?.data?.status === "Success") {
       permissionList.value = response?.data?.permissions;
       backupList.value = response?.data?.permissions;
-      isLoading.value = false;
+    } else {
+      permissionList.value = [];
+      backupList.value = [];
     }
   } catch (error) {
     console.error("Error fetching permissions:", error);
     permissionList.value = [];
+    backupList.value = [];
     showNotification(
       "error",
       error?.message || "An error occurred while fetching data."
     );
+  } finally {
     isLoading.value = false;
   }
 };
 
 // add new permission
 const addNewPermissions = async () => {
+  if (!form.value.name?.trim()) {
+    showNotification("error", "Permission name is required");
+    return;
+  }
+
   isLoading.value = true;
   const token = Cookies.get("token");
   const config = {
     headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
   };
@@ -203,16 +215,26 @@ const addNewPermissions = async () => {
       payload,
       config
     );
-    console.log("API Response:", response);
 
     if (response?.status === 200 && response?.data?.status === "Success") {
       showNotification("success", response?.data?.message);
       form.value.name = "";
       isModalVisible.value = false;
       getPermission();
+    } else {
+      showNotification(
+        "error",
+        response?.data?.message || "Failed to add permission"
+      );
     }
   } catch (error) {
     console.error("Error adding permission:", error);
+    showNotification(
+      "error",
+      error?.response?.data?.message ||
+        error?.message ||
+        "Something went wrong"
+    );
   } finally {
     isLoading.value = false;
   }

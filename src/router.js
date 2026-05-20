@@ -7,7 +7,9 @@ import Login from "./views/Login.vue";
 import UserManagement from "./views/user/UserManagement.vue";
 import Permission from "./views/user/Permission.vue";
 import Role from "./views/user/Role.vue";
+import EditRole from "./views/user/EditRole.vue";
 import EditUser from "./views/user/EditUser.vue";
+import UpdatePermission from "./views/user/UpdatePermission.vue";
 import ProductCategory from "./views/Product Category/category_list.vue";
 import Product_list from "./views/product/product_list.vue";
 
@@ -21,6 +23,11 @@ const routes = [
     path: "/user-management",
     name: "user-management",
     component: UserManagement,
+  },
+  {
+    path: "/role",
+    name: "role",
+    component: Role,
   },
   {
     path: "/user-permission",
@@ -38,11 +45,11 @@ const routes = [
     name: "product-list",
     component: Product_list,
   },
-  // {
-  //   path: "/update-user-permission/:id",
-  //   name: "update-user-permission",
-  //   component: UpdatePermission,
-  // },
+  {
+    path: "/update-user-permission/:id",
+    name: "update-user-permission",
+    component: UpdatePermission,
+  },
   {
     path: "/user-role",
     name: "user-role",
@@ -53,6 +60,12 @@ const routes = [
     path: "/user-edit/:id",
     name: "user-edit",
     component: EditUser,
+  },
+
+  {
+    path: "/user-role-edit/:id",
+    name: "user-role-edit",
+    component: EditRole,
   },
 
   

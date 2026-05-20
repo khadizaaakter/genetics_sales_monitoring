@@ -4,16 +4,16 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import MainLayout from "@/components/layout/MainLayout.vue";
 import { apiBase } from "@/config";
+import { showNotification } from "@/utilities/notification";
 import { useRoute, useRouter } from "vue-router";
 
 const route = useRoute();
 const router = useRouter();
 const emit = defineEmits(["update:isDrawerOpen"]);
 
-const isSnackbarVisible = ref(false);
 const isLoading = ref(false);
 const form = reactive({
-  name: "",
+  name: route.query?.name || "",
 });
 
 const permissionId = ref(route.params.id || null);
@@ -25,39 +25,47 @@ const reset = () => {
 };
 
 const addOrUpdatePermissions = async () => {
+  if (!form.name?.trim()) {
+    showNotification("error", "Permission name is required");
+    return;
+  }
+
   isLoading.value = true;
   try {
     const token = Cookies.get("token");
     const config = {
       headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
     };
 
-    const payload = {
-      name: form.name,
-    };
+    const payload = { name: form.name };
 
-    console.log("Payload:", payload);
+    const res = permissionId.value
+      ? await axios.put(
+          `${apiBase}/permissions/${permissionId.value}`,
+          payload,
+          config
+        )
+      : await axios.post(`${apiBase}/permissions`, payload, config);
 
-    let res;
-    if (permissionId.value) {
-      res = await axios.put(
-        `${apiBase}/permissions/${permissionId.value}`,
-        payload,
-        config
-      );
-    } else {
-      res = await axios.post(`${apiBase}/permissions`, payload, config);
-    }
-
-    if (res.status === 200 || res.status === 201) {
+    if (
+      (res.status === 200 || res.status === 201) &&
+      res?.data?.status === "Success"
+    ) {
+      showNotification("success", res?.data?.message || "Permission saved");
       router.push({ name: "user-permission" });
     } else {
-      console.error(res.data.message);
+      showNotification("error", res?.data?.message || "Failed to save");
     }
   } catch (err) {
     console.error(err);
+    showNotification(
+      "error",
+      err?.response?.data?.message || err?.message || "Something went wrong"
+    );
   } finally {
     isLoading.value = false;
   }
@@ -69,6 +77,7 @@ const fetchPermissionData = async () => {
     const token = Cookies.get("token");
     const config = {
       headers: {
+        Accept: "application/json",
         Authorization: `Bearer ${token}`,
       },
     };
@@ -77,10 +86,8 @@ const fetchPermissionData = async () => {
       config
     );
     const permissionData = res?.data?.permission;
-    if (permissionData) {
+    if (permissionData?.name) {
       form.name = permissionData.name;
-    } else {
-      console.error("Permission data is undefined");
     }
   } catch (err) {
     console.error(err);

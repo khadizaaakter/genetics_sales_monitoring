@@ -14,7 +14,7 @@
     <div
       class="text-uppercase pms text-white text-2xl py-4 text-center px-2 logo-text ps-4"
     >
-      <span class="font-bold">PMS</span>
+      <!-- <span class="font-bold">PMS</span> -->
     </div>
     <MenuList />
   </a-layout-sider>

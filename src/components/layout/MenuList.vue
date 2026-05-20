@@ -2,112 +2,65 @@
   <a-menu
     class=""
     v-model:selectedKeys="selectedKeys"
-    :open-keys="openKeys"
+    v-model:openKeys="openKeys"
     theme="dark"
     mode="inline"
   >
-    <a-menu-item key="evaluation-criteria" v-if="hasPermission('kra')">
-      <router-link :to="{ name: 'evaluation-criteria' }"> </router-link>
-      <UserOutlined />
-      <span>Evaluation Criteria</span>
-    </a-menu-item>
-    <a-menu-item
-      key="behavioural-factor"
-      v-if="hasPermission('behavioural-factor')"
-    >
-      <router-link
-        :to="{ name: 'behavioural-factor' }"
-        class="flex items-center"
-      >
-        <ProfileOutlined />
-        <span>Behavioural Factor</span>
-      </router-link>
-    </a-menu-item>
-    <a-menu-item key="kra" v-if="hasPermission('kra')">
-      <router-link :to="{ name: 'kra' }" class="flex items-center">
-        <ProfileOutlined />
-        <span>KRA</span>
-      </router-link>
-    </a-menu-item>
-    <a-menu-item key="kpis" v-if="hasPermission('kpis')">
-      <router-link :to="{ name: 'kpis' }" class="flex items-center">
-        <ProfileOutlined />
-        <span>KPIS</span>
-      </router-link>
-    </a-menu-item>
-    <a-menu-item
-      key="evalution-degree"
-      v-if="hasPermission('evalution-degree')"
-    >
-      <router-link :to="{ name: 'evalution-degree' }" class="flex items-center">
-        <ProfileOutlined />
-        <span> 360&#176; Evaluation</span>
-      </router-link>
-    </a-menu-item>
-
-    <!-- <a-sub-menu key="" disabled>
+    <!-- ================= BASIC ================= -->
+    <a-menu-item-group>
       <template #title>
-        <ProfileOutlined />
-        <span>PMS Control Panel</span>
+        <span class="menu-group-title">Main Menu</span>
       </template>
-      <a-menu-item key="">
-        <router-link :to="{ name: '' }">
-          KPI Ach. Entry Permission
+
+      <!-- Settings submenu -->
+      <a-sub-menu key="settings">
+        <template #title>
+          <span class="flex items-center">
+            <SettingOutlined />
+            <span class="ml-2">Product</span>
+          </span>
+        </template>
+        <a-menu-item key="product-category">
+          <router-link :to="{ name: 'product-category' }">
+            <span>Product Category</span>
+          </router-link>
+        </a-menu-item>
+        <a-menu-item key="product-list">
+          <router-link :to="{ name: 'product-list' }">
+            <span>Product List</span>
+          </router-link>
+        </a-menu-item>
+      </a-sub-menu>
+    </a-menu-item-group>
+
+<!-- user -->
+    <a-menu-item-group>
+      <template #title>
+        <span class="menu-group-title">User Management</span>
+      </template>
+
+      <a-menu-item key="user-management">
+        <router-link :to="{ name: 'user-management' }">
+          <SettingOutlined />
+          <span>User Manager</span>
         </router-link>
       </a-menu-item>
-      <a-menu-item key="">
-        <router-link :to="{ name: '' }">
-          360&#176; Evaluation Permission
+      <a-menu-item key="role">
+        <router-link :to="{ name: 'role' }">
+          <SettingOutlined />
+          <span>Role</span>
         </router-link>
       </a-menu-item>
-      <a-menu-item key="">
-        <router-link :to="{ name: '' }">
-          Values Assessment Permission
+
+      <a-menu-item key="user-permission">
+        <router-link :to="{ name: 'user-permission' }">
+          <SafetyOutlined />
+          <span>Permissions</span>
         </router-link>
       </a-menu-item>
-    </a-sub-menu> -->
+    </a-menu-item-group>
 
-    <a-menu-item key="copy-kpi" v-if="hasPermission('copy-kpi')">
-      <router-link :to="{ name: 'copy-kpi' }"> </router-link>
-      <ProfileOutlined />
-      <span>Copy KPI</span>
-    </a-menu-item>
-
-    <!-- <a-menu-item key="" disabled>
-      <router-link :to="{ name: '' }"> </router-link>
-      <ProfileOutlined />
-      <span>Project Management</span>
-    </a-menu-item> -->
-
-    <!-- <a-menu-item key="" disabled>
-      <router-link :to="{ name: '' }"> </router-link>
-      <ProfileOutlined />
-      <span>Strategy Map Mapping</span>
-    </a-menu-item> -->
-
-    <!-- <a-menu-item key="user-management" >
-      <router-link :to="{ name: 'user-management' }">
-        <team-outlined />
-        <span>Role Management</span>
-      </router-link>
-    </a-menu-item> -->
-
-    <!-- product category  -->
-    <a-menu-item key="product-category">
-      <router-link :to="{ name: 'product-category' }">
-        <AppstoreOutlined />
-        <span>Product Category</span>
-      </router-link>
-    </a-menu-item>
-    <!-- product list -->
-    <a-menu-item key="product-list">
-      <router-link :to="{ name: 'product-list' }">
-        <UnorderedListOutlined />
-        <span>Product List</span>
-      </router-link>
-    </a-menu-item>
-
-    <a-menu-item @click="handleLogout($router)" key="18">
+    <a-menu-item @click="handleLogout($router)" key="logout">
       <logout-outlined />
       <span>Logout</span>
     </a-menu-item>
@@ -119,11 +72,12 @@ import { useRoute } from "vue-router";
 import Cookies from "js-cookie";
 import {
   ProfileOutlined,
-  UserOutlined,
-  TeamOutlined,
   LogoutOutlined,
-  AppstoreOutlined,
   UnorderedListOutlined,
+  SettingOutlined,
+  DollarOutlined,
+  BarChartOutlined,
+  SafetyOutlined,
 } from "@ant-design/icons-vue";
 import { ref, watch } from "vue";
 
@@ -132,12 +86,16 @@ const route = useRoute();
 const selectedKeys = ref([route?.name]);
 const openKeys = ref([]);
 
-// Get and store user permissions
+// Map each child route name to its parent submenu key
+const routeToSubmenu = {
+  "product-category": "settings",
+  "product-list": "settings",
+};
+
 const user_permissions = ref(
   JSON.parse(localStorage.getItem("user_permissions") || "[]")
 );
 
-// Function to check if user has a permission
 const hasPermission = (permission) => {
   return user_permissions.value.includes(permission);
 };
@@ -147,14 +105,18 @@ const handleLogout = (router) => {
   localStorage.removeItem("staff_id");
   localStorage.removeItem("name");
   localStorage.removeItem("user_permissions");
-  // localStorage.clear();
   router.push({ name: "login" });
 };
 
 watch(
-  () => route?.path,
-  () => {
-    openKeys.value = [route?.path?.split("/")?.at(1)];
+  () => route?.name,
+  (name) => {
+    selectedKeys.value = [name];
+
+    const parent = routeToSubmenu[name];
+    if (parent && !openKeys.value.includes(parent)) {
+      openKeys.value = [...openKeys.value, parent];
+    }
   },
   { immediate: true }
 );
@@ -177,11 +139,28 @@ watch(
 .ant-menu-sub {
   background: transparent !important;
 }
-/* .bg {
-  background-color: #292e66 !important;
-} */
 
-/* element.style {
-  background-color: #2d2d61;
-} */
+/* Section group title (BASIC, REPORTS, MIS SETTINGS) */
+.ant-menu-item-group-title {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  letter-spacing: 1px;
+  font-size: 13px !important;
+  padding-top: 16px !important;
+}
+
+.menu-group-title {
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* Bullet point for submenu items, like in the screenshot */
+.ant-menu-sub .ant-menu-item .ant-menu-title-content::before {
+  content: "•";
+  color: #ffffff;
+  margin-right: 10px;
+  font-size: 18px;
+  line-height: 1;
+}
 </style>

@@ -245,58 +245,62 @@ const getPermission = async () => {
 
 // create role
 const createRole = async () => {
-  console.log(formData.value); // To check what is being sent
   const token = Cookies.get("token");
   const config = {
     headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
   };
 
+  const payload = {
+    name: formData.value.name,
+    permission: formData.value.permission,
+  };
+
   try {
-    const response = await axios.post(
-      `${apiBase}/roles`,
-      formData.value,
-      config
-    );
+    const response = await axios.post(`${apiBase}/roles`, payload, config);
 
     if (response?.status === 200 && response?.data?.status === "Success") {
       showNotification("Success", response?.data?.message);
+      isModalVisible.value = false;
+      formData.value = { name: "", permission: [] };
       fetchData();
     } else {
       showNotification("Error", response?.data?.message || "An error occurred");
     }
-    isModalVisible.value = false; // Close the modal after submission
   } catch (error) {
     console.error(error);
     showNotification("Error", error?.message || "Something went wrong");
-    isModalVisible.value = false; // Close the modal even in case of an error
   }
 };
 
-// delete roll
-// delete roll
+// delete role
 const deleteRole = async (id) => {
   isDeleting.value = true;
+  const token = Cookies.get("token");
+  const config = {
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  };
   try {
-    const token = Cookies.get("token");
-    const config = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
     const response = await axios.delete(`${apiBase}/roles/${id}`, config);
-    isDeleting.value = false;
     if (response?.status == 200 && response?.data?.status === "Success") {
       showNotification("Success", response?.data?.message);
+      fetchData();
+    } else {
+      showNotification(
+        "Error",
+        response?.data?.message || "Failed to delete role"
+      );
     }
-    isDeleting.value = false;
-    fetchData();
   } catch (error) {
+    showNotification("Error", error?.message || "Something went wrong");
+  } finally {
     isDeleting.value = false;
-    isLoading.value = false;
-    fetchData();
-    showNotification("error", error?.message);
   }
 };
 
