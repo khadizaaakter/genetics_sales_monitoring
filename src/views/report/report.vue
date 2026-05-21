@@ -1,8 +1,8 @@
 <template>
   <MainLayout>
-    <div class="p-6">
-      <h1 class="text-2xl font-semibold text-gray-800 mb-4">
-        Dealer Wise LA Buying Report
+    <div class="p-0">
+      <h1 class="text-2xl font-semibold text-gray-800 mb-1">
+        Dealer Wise LA Sales Report
       </h1>
 
       <!-- Filter bar -->
@@ -10,9 +10,7 @@
         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 bg-white rounded-lg mb-4"
       >
         <div>
-          <label class="block text-sm font-medium text-gray-600 mb-1"
-            >Dealer Code <span class="text-red-500">*</span></label
-          >
+          <label class="block text-sm font-medium text-gray-600 mb-1">Dealer Code</label>
           <a-input
             v-model:value="dealerCode"
             placeholder="Enter a Dealer Code"
@@ -21,9 +19,7 @@
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-600 mb-1"
-            >LA ID</label
-          >
+          <label class="block text-sm font-medium text-gray-600 mb-1">LA ID</label>
           <a-input
             v-model:value="laid"
             placeholder="Enter LA ID"
@@ -32,9 +28,7 @@
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-600 mb-1"
-            >From Date</label
-          >
+          <label class="block text-sm font-medium text-gray-600 mb-1">From Date</label>
           <a-date-picker
             v-model:value="fromDate"
             class="w-full"
@@ -43,9 +37,7 @@
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-600 mb-1"
-            >To Date</label
-          >
+          <label class="block text-sm font-medium text-gray-600 mb-1">To Date</label>
           <a-date-picker
             v-model:value="toDate"
             class="w-full"
@@ -70,9 +62,7 @@
       <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
         <table class="min-w-full text-sm">
           <thead>
-            <tr
-              class="bg-[#f8f9fc] text-gray-600 font-semibold border-b border-gray-200"
-            >
+            <tr class="bg-[#f8f9fc] text-gray-600 font-semibold border-b border-gray-200">
               <th class="py-3 px-3 text-center w-12">SL</th>
               <th class="py-3 px-3 text-left">LA ID</th>
               <th class="py-3 px-3 text-left">LA</th>
@@ -95,21 +85,17 @@
             </tr>
             <tr v-else-if="!rows.length">
               <td colspan="12" class="py-6 text-center">
-                <a-empty
-                  :description="
-                    hasLoadedOnce
-                      ? 'No records for this dealer'
-                      : 'Enter a dealer code and click Load'
-                  "
-                />
+                <a-empty description="No records found" />
               </td>
             </tr>
             <tr
-              v-for="(r, index) in rows"
+              v-for="(r, index) in paginatedRows()"
               :key="index"
               class="border-b border-gray-100 hover:bg-gray-50"
             >
-              <td class="py-2 px-3 text-center">{{ index + 1 }}</td>
+              <td class="py-2 px-3 text-center">
+                {{ (currentPage - 1) * pageSize + index + 1 }}
+              </td>
               <td class="py-2 px-3">{{ r.LAID }}</td>
               <td class="py-2 px-3">{{ r.LA }}</td>
               <td class="py-2 px-3">{{ formatDate(r.BuyingDate) }}</td>
@@ -135,33 +121,44 @@
             <tr class="bg-gray-50 font-semibold border-t border-gray-300">
               <td class="py-3 px-3 text-right" colspan="6">Total</td>
               <td class="py-3 px-3 text-right">
-                {{ formatNumber(totals.quantity) }}
+                {{ formatNumber(sumField("Quantity")) }}
               </td>
               <td class="py-3 px-3 text-right">
-                {{ formatNumber(totals.price) }}
+                {{ formatNumber(sumField("Price")) }}
               </td>
               <td class="py-3 px-3 text-right">
-                {{ formatNumber(totals.payment) }}
+                {{ formatNumber(sumField("Payment")) }}
               </td>
               <td class="py-3 px-3 text-right">
-                {{ formatNumber(totals.due) }}
+                {{ formatNumber(sumField("Due")) }}
               </td>
               <td class="py-3 px-3 text-right">
-                {{ formatNumber(totals.discount) }}
+                {{ formatNumber(sumField("DiscountAmount")) }}
               </td>
               <td class="py-3 px-3 text-right">
-                {{ formatNumber(totals.bonus) }}
+                {{ formatNumber(sumField("BonusQty")) }}
               </td>
             </tr>
           </tfoot>
         </table>
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="rows.length" class="flex justify-end mt-4">
+        <a-pagination
+          v-model:current="currentPage"
+          v-model:page-size="pageSize"
+          :total="rows.length"
+          :show-size-changer="true"
+          :page-size-options="['10', '20', '50', '100']"
+        />
       </div>
     </div>
   </MainLayout>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, onMounted } from "vue";
 import axios from "axios";
 import Cookies from "js-cookie";
 import MainLayout from "@/components/layout/MainLayout.vue";
@@ -175,27 +172,24 @@ const toDate = ref(null);
 const rows = ref([]);
 const loading = ref(false);
 const hasLoadedOnce = ref(false);
+const currentPage = ref(1);
+const pageSize = ref(18);
+
+const paginatedRows = () => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  return rows.value.slice(start, start + pageSize.value);
+};
 
 const resetFilters = () => {
   dealerCode.value = "";
   laid.value = "";
   fromDate.value = null;
   toDate.value = null;
-  rows.value = [];
-  hasLoadedOnce.value = false;
+  loadReport();
 };
 
 const sumField = (field) =>
   rows.value.reduce((acc, r) => acc + (Number(r?.[field]) || 0), 0);
-
-const totals = computed(() => ({
-  quantity: sumField("Quantity"),
-  price: sumField("Price"),
-  payment: sumField("Payment"),
-  due: sumField("Due"),
-  discount: sumField("DiscountAmount"),
-  bonus: sumField("BonusQty"),
-}));
 
 const formatDate = (value) => {
   if (!value) return "";
@@ -217,39 +211,26 @@ const formatNumber = (value) => {
 };
 
 const loadReport = async () => {
-  const code = dealerCode.value?.trim();
-  if (!code) {
-    showNotification("error", "Please enter a dealer code");
-    return;
-  }
-
   loading.value = true;
   hasLoadedOnce.value = true;
   try {
     const token = Cookies.get("token");
-    const payload = { dealer_code: code };
-    if (laid.value?.trim()) payload.laid = laid.value.trim();
-    if (fromDate.value) payload.from_date = fromDate.value;
-    if (toDate.value) payload.to_date = toDate.value;
+    const payload = {
+      dealer_code: dealerCode.value?.trim() || "",
+      laid: laid.value?.trim() || "",
+      from_date: fromDate.value || "",
+      to_date: toDate.value || "",
+    };
 
-    const res = await axios.post(
-      `${apiBase}/dealer_wise_la_buying_seman_list`,
-      payload,
-      {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      }
-    );
+    const res = await axios.post(`${apiBase}/la_buying_seman_list`, payload, {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
     rows.value = Array.isArray(res?.data?.data) ? res.data.data : [];
-    if (!rows.value.length) {
-      showNotification(
-        "info",
-        res?.data?.message || "No records for this dealer"
-      );
-    }
+    currentPage.value = 1;
   } catch (err) {
     console.error("Report load failed", err?.response?.data || err);
     rows.value = [];
@@ -261,4 +242,8 @@ const loadReport = async () => {
     loading.value = false;
   }
 };
+
+onMounted(() => {
+  loadReport();
+});
 </script>
