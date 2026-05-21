@@ -24,6 +24,14 @@ export const useLoginStore = defineStore("loginStore", {
           !!payload?.token;
 
         if (isSuccess && payload?.token) {
+          if (payload?.role === "Customer") {
+            showNotification(
+              "error",
+              "Customers are not allowed to log in to this portal."
+            );
+            return;
+          }
+
           Cookies.set("token", payload.token, { expires: null });
           localStorage.setItem("name", payload?.name ?? "");
           localStorage.setItem("email", payload?.email ?? "");
