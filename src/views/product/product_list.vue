@@ -16,7 +16,7 @@
       </div>
 
       <div
-        class="flex flex-wrap items-center justify-between gap-3 mb-4 bg-white p-4 rounded-lg"
+        class="flex flex-wrap items-center justify-between gap-3 mb-4 bg-white rounded-lg"
       >
         <a-input-search
           v-model:value="searchQuery"
