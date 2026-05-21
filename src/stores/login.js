@@ -27,7 +27,7 @@ export const useLoginStore = defineStore("loginStore", {
           if (payload?.role === "Customer") {
             showNotification(
               "error",
-              "Customers are not allowed to log in to this portal."
+              "Customers are not allowed to login."
             );
             return;
           }
@@ -50,7 +50,7 @@ export const useLoginStore = defineStore("loginStore", {
             "success",
             payload?.message || "Login successful! Welcome back."
           );
-          router.push({ name: "product-category" });
+          router.push({ name: "dashboard" });
         } else {
           showNotification(
             "error",

@@ -12,6 +12,8 @@ import EditUser from "./views/user/EditUser.vue";
 import UpdatePermission from "./views/user/UpdatePermission.vue";
 import ProductCategory from "./views/Product Category/category_list.vue";
 import Product_list from "./views/product/product_list.vue";
+import Dashboard from "./views/dashboard/dashboard.vue";
+import Report from "./views/report/report.vue";
 
 const routes = [
   {
@@ -46,6 +48,16 @@ const routes = [
     component: Product_list,
   },
   {
+    path: "/dashboard",
+    name: "dashboard",
+    component: Dashboard,
+  },
+  {
+    path: "/report",
+    name: "report",
+    component: Report,
+  },
+  {
     path: "/update-user-permission/:id",
     name: "update-user-permission",
     component: UpdatePermission,
@@ -68,8 +80,6 @@ const routes = [
     component: EditRole,
   },
 
-  
-
   {
     path: "/:catchAll(.*)",
     redirect: "/",
@@ -85,7 +95,7 @@ router.beforeEach((to, from, next) => {
   if (to.path === "/" && !token) {
     next();
   } else if (to.path === "/" && token) {
-    next("/product-category");
+    next("/dashboard");
   } else if (token) {
     next();
   } else {

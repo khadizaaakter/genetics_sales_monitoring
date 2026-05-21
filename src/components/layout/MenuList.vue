@@ -11,12 +11,19 @@
       <template #title>
         <span class="menu-group-title">Main Menu</span>
       </template>
+      <!-- dashboard -->
+      <a-menu-item key="dashboard">
+        <router-link :to="{ name: 'dashboard' }">
+          <StockOutlined />
+          <span>Dashboard</span>
+        </router-link>
+      </a-menu-item>
 
       <!-- Settings submenu -->
       <a-sub-menu key="settings">
         <template #title>
           <span class="flex items-center">
-            <SettingOutlined />
+            <ShoppingOutlined />
             <span class="ml-2">Product</span>
           </span>
         </template>
@@ -33,7 +40,15 @@
       </a-sub-menu>
     </a-menu-item-group>
 
-<!-- user -->
+    <!-- report -->
+    <a-menu-item key="report">
+      <router-link :to="{ name: 'report' }">
+        <BarChartOutlined />
+        <span>Report</span>
+      </router-link>
+    </a-menu-item>
+
+    <!-- user -->
     <a-menu-item-group>
       <template #title>
         <span class="menu-group-title">User Management</span>
@@ -41,13 +56,13 @@
 
       <a-menu-item key="user-management">
         <router-link :to="{ name: 'user-management' }">
-          <SettingOutlined />
+          <TeamOutlined />
           <span>User Manager</span>
         </router-link>
       </a-menu-item>
       <a-menu-item key="role">
         <router-link :to="{ name: 'role' }">
-          <SettingOutlined />
+          <IdcardOutlined />
           <span>Role</span>
         </router-link>
       </a-menu-item>
@@ -78,6 +93,11 @@ import {
   DollarOutlined,
   BarChartOutlined,
   SafetyOutlined,
+  DashboardOutlined,
+  ShoppingOutlined,
+  TeamOutlined,
+  IdcardOutlined,
+  StockOutlined,
 } from "@ant-design/icons-vue";
 import { ref, watch } from "vue";
 

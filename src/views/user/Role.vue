@@ -153,9 +153,9 @@
         </table>
       </div>
     </div>
-    <div class="corder absolute bottom-0 right-0">
+    <!-- <div class="corder absolute bottom-0 right-0">
       <img class="w-48" :src="cornerImg" alt="" />
-    </div>
+    </div> -->
   </MainLayout>
 </template>
 

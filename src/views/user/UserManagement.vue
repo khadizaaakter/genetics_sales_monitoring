@@ -122,7 +122,12 @@
         :width="720"
         @cancel="resetForm"
       >
-        <a-form :model="form" layout="vertical" @finish="createUser">
+        <a-form
+          :model="form"
+          layout="vertical"
+          autocomplete="off"
+          @finish="createUser"
+        >
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
           <a-form-item
             label="Role"
@@ -250,7 +255,11 @@
             name="email"
             :rules="[{ type: 'email', message: 'Please enter a valid email' }]"
           >
-            <a-input v-model:value="form.email" placeholder="Enter email" />
+            <a-input
+              v-model:value="form.email"
+              placeholder="Enter email"
+              autocomplete="off"
+            />
           </a-form-item>
 
           <a-form-item
@@ -264,6 +273,7 @@
             <a-input-password
               v-model:value="form.password"
               placeholder="Enter password"
+              autocomplete="new-password"
             />
           </a-form-item>
           </div>
