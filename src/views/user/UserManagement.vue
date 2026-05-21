@@ -291,7 +291,7 @@
 import MainLayout from "@/components/layout/MainLayout.vue";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { apiBase } from "@/config";
 import { getTokenConfig } from "@/utilities/tokenConfig";
@@ -517,13 +517,28 @@ const fetchUserList = async () => {
 const filteredData = () => {
   const q = searchQuery.value.trim().toLowerCase();
   if (!q) return userList.value;
-  return userList.value.filter((c) => c?.user?.toLowerCase().includes(q));
+  return userList.value.filter((u) => {
+    const fields = [
+      u?.name,
+      u?.shop_name,
+      u?.owner_name,
+      u?.email,
+      u?.mobile,
+      u?.dealer_code,
+      u?.staff_id,
+    ];
+    return fields.some((f) => String(f ?? "").toLowerCase().includes(q));
+  });
 };
 
 const paginatedData = () => {
   const start = (currentPage.value - 1) * pageSize.value;
   return filteredData().slice(start, start + pageSize.value);
 };
+
+watch(searchQuery, () => {
+  currentPage.value = 1;
+});
 
 onMounted(() => {
   fetchUserList();
