@@ -28,10 +28,7 @@
             </p>
             <p>
               <strong class="mr-1">Permissions:</strong>
-              <span
-                v-for="(permission, index) in userData?.permissions"
-                :key="index"
-              >
+              <span v-for="(permission, index) in userData?.permissions" :key="index">
                 {{ permission?.name }}
                 <span v-if="index < userData?.permissions?.length - 1">, </span>
               </span>
@@ -93,10 +90,7 @@
                 </div>
               </div>
               <div class="flex gap-2">
-                <button
-                  type="submit"
-                  class="bg-blue-600 text-white px-4 py-2 rounded"
-                >
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">
                   Submit
                 </button>
                 <!-- <Button type="primary" htmlType="submit">Submit</Button> -->
@@ -117,9 +111,7 @@
                     @change="toggleSelectAll"
                     class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
-                  <span class="text-sm text-gray-700 font-bold"
-                    >Select All</span
-                  >
+                  <span class="text-sm text-gray-700 font-bold">Select All</span>
                 </label>
                 <div v-for="permission in permissionList" :key="permission?.id">
                   <label
@@ -140,10 +132,7 @@
                 </div>
               </div>
               <div class="flex gap-2">
-                <button
-                  type="submit"
-                  class="bg-blue-600 text-white px-4 py-2 rounded"
-                >
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">
                   Submit
                 </button>
                 <Button @click="router.go(-1)">Previous</Button>
@@ -153,9 +142,9 @@
         </div>
       </div>
     </div>
-    <div class="corder absolute bottom-0 right-0">
+    <!-- <div class="corder absolute bottom-0 right-0">
       <img class="w-48" :src="cornerImg" alt="" />
-    </div>
+    </div> -->
   </MainLayout>
 </template>
 <script setup>
@@ -236,10 +225,7 @@ const assignPermission = async () => {
         res?.data?.message || "Permissions updated successfully."
       );
     } else {
-      showNotification(
-        "error",
-        res?.data?.message || "Failed to update permissions."
-      );
+      showNotification("error", res?.data?.message || "Failed to update permissions.");
     }
   } catch (err) {
     showNotification(
@@ -253,11 +239,7 @@ const assignPermission = async () => {
 // Update user
 const updateUser = async (userInfo) => {
   try {
-    const res = await axios.put(
-      `${apiBase}/user_update/${id}`,
-      userInfo,
-      config
-    );
+    const res = await axios.put(`${apiBase}/user_update/${id}`, userInfo, config);
     if (res?.status === 201 && res?.data?.status === "success") {
       showNotification("success", res?.data?.message);
     } else {
