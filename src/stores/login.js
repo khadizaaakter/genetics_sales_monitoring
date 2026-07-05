@@ -24,10 +24,11 @@ export const useLoginStore = defineStore("loginStore", {
           !!payload?.token;
 
         if (isSuccess && payload?.token) {
-          if (payload?.role === "Customer") {
+          const blockedRoles = ["customer", "dealer"];
+          if (blockedRoles.includes(payload?.role?.toLowerCase())) {
             showNotification(
               "error",
-              "Customers are not allowed to login."
+              `${payload?.role || "User"} is not allowed to login.`
             );
             return;
           }
@@ -35,15 +36,19 @@ export const useLoginStore = defineStore("loginStore", {
           Cookies.set("token", payload.token, { expires: null });
           localStorage.setItem("name", payload?.name ?? "");
           localStorage.setItem("email", payload?.email ?? "");
+          localStorage.setItem("role", payload?.role ?? "");
           localStorage.setItem(
             "staff_id",
             payload?.staff_id ?? payload?.dealer_code ?? ""
           );
+
+          const permissions = await this.fetchRolePermissions(
+            payload?.role,
+            payload?.token
+          );
           localStorage.setItem(
             "user_permissions",
-            JSON.stringify(
-              payload?.user?.all_permissions?.map((item) => item?.name) ?? []
-            )
+            JSON.stringify(permissions)
           );
 
           showNotification(
@@ -65,6 +70,23 @@ export const useLoginStore = defineStore("loginStore", {
           error?.response?.data?.message || "An unexpected error occurred.";
         console.error("Login error:", errorMessage); // Log the error message
         showNotification("error", errorMessage);
+      }
+    },
+
+    async fetchRolePermissions(roleName, token) {
+      if (!roleName) return [];
+      try {
+        const res = await axios.get(`${apiBase}/roles`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const roles = res?.data?.role ?? [];
+        const matched = roles.find(
+          (r) => r?.name?.toLowerCase() === roleName?.toLowerCase()
+        );
+        return matched?.permissions?.map((p) => p?.name) ?? [];
+      } catch (error) {
+        console.error("Failed to fetch role permissions:", error);
+        return [];
       }
     },
 

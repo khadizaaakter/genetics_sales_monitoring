@@ -56,14 +56,14 @@
               :key="category.CategoryID ?? index"
               class="border-b border-gray-100 hover:bg-gray-50"
             >
-              <td class="py-3 px-4 text-center">
+              <td class="py-2 px-4 text-center">
                 {{ (currentPage - 1) * pageSize + index + 1 }}
               </td>
-              <td class="py-3 px-4 font-medium">{{ category.Category ?? "-" }}</td>
-              <td class="py-3 px-4">
+              <td class="py-2 px-4 font-medium">{{ category.Category ?? "-" }}</td>
+              <td class="py-2 px-4">
                 {{ category?.discount_type?.DiscountType ?? "-" }}
               </td>
-              <td class="py-3 px-4 text-center">
+              <td class="py-2 px-4 text-center">
                 <a-tag
                   :color="category.Active === 'Y' ? 'green' : 'red'"
                   class="capitalize rounded-full px-3"
@@ -71,7 +71,7 @@
                   {{ category.Active === "Y" ? "Active" : "Inactive" }}
                 </a-tag>
               </td>
-              <td class="py-3 px-4">
+              <td class="py-2 px-4">
                 <div class="flex justify-center gap-2">
                   <a-button
                     size="small"
@@ -361,9 +361,7 @@ const handleEdit = (record) => {
   editingCategoryId.value = record.CategoryID;
   form.value = {
     Category: record.Category ?? "",
-    DiscountTypeID: record.DiscountTypeID
-      ? Number(record.DiscountTypeID)
-      : undefined,
+    DiscountTypeID: record.DiscountTypeID ? Number(record.DiscountTypeID) : undefined,
     Active: record.Active ?? "Y",
   };
   isEditModalOpen.value = true;
@@ -390,24 +388,16 @@ const editCategory = async () => {
     );
 
     if (res?.data?.status === 1 || res?.data?.status === "success") {
-      showNotification(
-        "success",
-        res?.data?.message || "Category updated successfully."
-      );
+      showNotification("success", res?.data?.message || "Category updated successfully.");
       closeEditModal();
       await fetchCategories();
     } else {
-      showNotification(
-        "error",
-        res?.data?.message || "Failed to update category."
-      );
+      showNotification("error", res?.data?.message || "Failed to update category.");
     }
   } catch (error) {
     showNotification(
       "error",
-      error?.response?.data?.message ||
-        error?.message ||
-        "Failed to update category."
+      error?.response?.data?.message || error?.message || "Failed to update category."
     );
   } finally {
     isSubmitting.value = false;
@@ -416,29 +406,18 @@ const editCategory = async () => {
 
 const handleDelete = async (id) => {
   try {
-    const res = await axios.delete(
-      `${apiBase}/product_category/${id}`,
-      getTokenConfig()
-    );
+    const res = await axios.delete(`${apiBase}/product_category/${id}`, getTokenConfig());
 
     if (res?.data?.status === 1 || res?.data?.status === "success") {
-      showNotification(
-        "success",
-        res?.data?.message || "Category deleted successfully."
-      );
+      showNotification("success", res?.data?.message || "Category deleted successfully.");
       await fetchCategories();
     } else {
-      showNotification(
-        "error",
-        res?.data?.message || "Failed to delete category."
-      );
+      showNotification("error", res?.data?.message || "Failed to delete category.");
     }
   } catch (error) {
     showNotification(
       "error",
-      error?.response?.data?.message ||
-        error?.message ||
-        "Failed to delete category."
+      error?.response?.data?.message || error?.message || "Failed to delete category."
     );
   }
 };

@@ -60,14 +60,16 @@
               :key="user.id ?? index"
               class="border-b border-gray-100 hover:bg-gray-50"
             >
-              <td class="text-center">{{ (currentPage - 1) * pageSize + index + 1 }}</td>
+              <td class="text-center">
+                {{ (currentPage - 1) * pageSize + index + 1 }}
+              </td>
               <td class="text-center">{{ user?.name }}</td>
-              <td class="text-center">{{ user?.staff_id || '-' }}</td>
-              <td class="text-center">{{ user?.shop_name || '-' }}</td>
-              <td class="text-center">{{ user?.owner_name || '-' }}</td>
-              <td class="text-center">{{ user?.user_id || '-' }}</td>
-              <td class="text-center">{{ user?.email || '-' }}</td>
-              <td class="text-center">{{ user?.mobile || '-' }}</td>
+              <td class="text-center">{{ user?.staff_id || "-" }}</td>
+              <td class="text-center">{{ user?.shop_name || "-" }}</td>
+              <td class="text-center">{{ user?.owner_name || "-" }}</td>
+              <td class="text-center">{{ user?.user_id || "-" }}</td>
+              <td class="text-center">{{ user?.email || "-" }}</td>
+              <td class="text-center">{{ user?.mobile || "-" }}</td>
               <td class="text-center">
                 {{ user?.roles?.map((r) => r.name).join(", ") || "-" }}
               </td>
@@ -76,13 +78,13 @@
               </td>
               <td class="py-3 px-4">
                 <div class="flex justify-center gap-2">
-                  <!-- <a-button
+                  <a-button
                     size="small"
                     class="bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100"
                     @click="handleEdit(user.id)"
                   >
                     <EditOutlined />
-                  </a-button> -->
+                  </a-button>
                   <a-popconfirm
                     title="Delete this User?"
                     ok-text="Yes"
@@ -122,166 +124,146 @@
         :width="720"
         @cancel="resetForm"
       >
-        <a-form
-          :model="form"
-          layout="vertical"
-          autocomplete="off"
-          @finish="createUser"
-        >
+        <a-form :model="form" layout="vertical" autocomplete="off" @finish="createUser">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-          <a-form-item
-            label="Role"
-            name="role"
-            :rules="[{ required: true, message: 'Please select a role' }]"
-          >
-            <a-select
-              v-model:value="form.role"
-              :loading="rolesLoading"
-              placeholder="Select role"
-              @change="onRoleChange"
+            <a-form-item
+              label="Role"
+              name="role"
+              :rules="[{ required: true, message: 'Please select a role' }]"
             >
-              <a-select-option
-                v-for="r in rolesList"
-                :key="r.id"
-                :value="r.name"
+              <a-select
+                v-model:value="form.role"
+                :loading="rolesLoading"
+                placeholder="Select role"
+                @change="onRoleChange"
               >
-                {{ r.name }}
-              </a-select-option>
-            </a-select>
-          </a-form-item>
+                <a-select-option v-for="r in rolesList" :key="r.id" :value="r.name">
+                  {{ r.name }}
+                </a-select-option>
+              </a-select>
+            </a-form-item>
 
-          <a-form-item
-            v-if="getRoleEndpoint(form.role) && form.role !== 'Customer'"
-            label="Staff ID"
-            name="staff_id"
-            :rules="[{ required: true, message: 'Please select a staff' }]"
-          >
-            <a-select
-              v-model:value="form.staff_id"
-              show-search
-              :filter-option="false"
-              :default-active-first-option="false"
-              :show-arrow="false"
-              :not-found-content="staffLoading ? null : 'No matches'"
-              :loading="staffLoading"
-              placeholder="Search by Staff ID (e.g. 15635)"
-              @search="handleStaffSearch"
-              @change="onStaffChange"
+            <a-form-item
+              v-if="getRoleEndpoint(form.role) && form.role !== 'Customer'"
+              label="Staff ID"
+              name="staff_id"
+              :rules="[{ required: true, message: 'Please select a staff' }]"
             >
-              <a-select-option
-                v-for="s in staffOptions"
-                :key="s.UserID"
-                :value="s.StaffID"
+              <a-select
+                v-model:value="form.staff_id"
+                show-search
+                :filter-option="false"
+                :default-active-first-option="false"
+                :show-arrow="false"
+                :not-found-content="staffLoading ? null : 'No matches'"
+                :loading="staffLoading"
+                placeholder="Search by Staff ID (e.g. 15635)"
+                @search="handleStaffSearch"
+                @change="onStaffChange"
               >
-                {{ s.StaffID }} - {{ s.UserName }}
-              </a-select-option>
-            </a-select>
-          </a-form-item>
+                <a-select-option
+                  v-for="s in staffOptions"
+                  :key="s.UserID"
+                  :value="s.StaffID"
+                >
+                  {{ s.StaffID }} - {{ s.UserName }}
+                </a-select-option>
+              </a-select>
+            </a-form-item>
 
-          <a-form-item
-            label="Name"
-            name="name"
-            :rules="[{ required: true, message: 'Please enter name' }]"
-          >
-            <a-input v-model:value="form.name" placeholder="Enter name" />
-          </a-form-item>
-
-          <a-form-item
-            label="Dealer Code"
-            name="dealer_code"
-            :rules="
-              form.role === 'Customer'
-                ? [{ required: true, message: 'Please select a dealer code' }]
-                : []
-            "
-          >
-            <a-select
-              v-if="form.role === 'Customer'"
-              v-model:value="form.dealer_code"
-              show-search
-              :filter-option="false"
-              :default-active-first-option="false"
-              :show-arrow="false"
-              :not-found-content="staffLoading ? null : 'No matches'"
-              :loading="staffLoading"
-              placeholder="Search dealer code (e.g. GB3002P)"
-              @search="handleStaffSearch"
-              @change="onStaffChange"
+            <a-form-item
+              label="Name"
+              name="name"
+              :rules="[{ required: true, message: 'Please enter name' }]"
             >
-              <a-select-option
-                v-for="s in staffOptions"
-                :key="s.UserID"
-                :value="s.UserID"
+              <a-input v-model:value="form.name" placeholder="Enter name" />
+            </a-form-item>
+
+            <a-form-item
+              label="Dealer Code"
+              name="dealer_code"
+              :rules="
+                form.role === 'Customer'
+                  ? [{ required: true, message: 'Please select a dealer code' }]
+                  : []
+              "
+            >
+              <a-select
+                v-if="form.role === 'Customer'"
+                v-model:value="form.dealer_code"
+                show-search
+                :filter-option="false"
+                :default-active-first-option="false"
+                :show-arrow="false"
+                :not-found-content="staffLoading ? null : 'No matches'"
+                :loading="staffLoading"
+                placeholder="Search dealer code (e.g. GB3002P)"
+                @search="handleStaffSearch"
+                @change="onStaffChange"
               >
-                {{ s.UserID }} - {{ s.UserName }}
-              </a-select-option>
-            </a-select>
-            <a-input
-              v-else-if="getRoleEndpoint(form.role)"
-              v-model:value="form.dealer_code"
-              placeholder="Auto-filled from selected staff"
-              readonly
-            />
-            <a-input
-              v-else
-              v-model:value="form.dealer_code"
-              placeholder="Enter dealer code"
-            />
-          </a-form-item>
+                <a-select-option
+                  v-for="s in staffOptions"
+                  :key="s.UserID"
+                  :value="s.UserID"
+                >
+                  {{ s.UserID }} - {{ s.UserName }}
+                </a-select-option>
+              </a-select>
+              <a-input
+                v-else-if="getRoleEndpoint(form.role)"
+                v-model:value="form.dealer_code"
+                placeholder="Auto-filled from selected staff"
+                readonly
+              />
+              <a-input
+                v-else
+                v-model:value="form.dealer_code"
+                placeholder="Enter dealer code"
+              />
+            </a-form-item>
 
-          <a-form-item label="Shop Name" name="shop_name">
-            <a-input
-              v-model:value="form.shop_name"
-              placeholder="Enter shop name"
-            />
-          </a-form-item>
+            <a-form-item label="Shop Name" name="shop_name">
+              <a-input v-model:value="form.shop_name" placeholder="Enter shop name" />
+            </a-form-item>
 
-          <a-form-item label="Owner Name" name="owner_name">
-            <a-input
-              v-model:value="form.owner_name"
-              placeholder="Enter owner name"
-            />
-          </a-form-item>
+            <a-form-item label="Owner Name" name="owner_name">
+              <a-input v-model:value="form.owner_name" placeholder="Enter owner name" />
+            </a-form-item>
 
-          <a-form-item label="Mobile" name="mobile">
-            <a-input
-              v-model:value="form.mobile"
-              placeholder="Enter mobile number"
-            />
-          </a-form-item>
+            <a-form-item label="Mobile" name="mobile">
+              <a-input v-model:value="form.mobile" placeholder="Enter mobile number" />
+            </a-form-item>
 
-          <a-form-item
-            label="Email"
-            name="email"
-            :rules="[{ type: 'email', message: 'Please enter a valid email' }]"
-          >
-            <a-input
-              v-model:value="form.email"
-              placeholder="Enter email"
-              autocomplete="off"
-            />
-          </a-form-item>
+            <a-form-item
+              label="Email"
+              name="email"
+              :rules="[{ type: 'email', message: 'Please enter a valid email' }]"
+            >
+              <a-input
+                v-model:value="form.email"
+                placeholder="Enter email"
+                autocomplete="off"
+              />
+            </a-form-item>
 
-          <a-form-item
-            label="Password"
-            name="password"
-            :rules="[
-              { required: true, message: 'Please enter password' },
-              { min: 6, message: 'Password must be at least 6 characters' },
-            ]"
-          >
-            <a-input-password
-              v-model:value="form.password"
-              placeholder="Enter password"
-              autocomplete="new-password"
-            />
-          </a-form-item>
+            <a-form-item
+              label="Password"
+              name="password"
+              :rules="[
+                { required: true, message: 'Please enter password' },
+                { min: 6, message: 'Password must be at least 6 characters' },
+              ]"
+            >
+              <a-input-password
+                v-model:value="form.password"
+                placeholder="Enter password"
+                autocomplete="new-password"
+              />
+            </a-form-item>
           </div>
 
           <div class="flex justify-end gap-2 mt-4">
-            <a-button @click="closeAddModal" :disabled="isSubmitting">
-              Cancel
-            </a-button>
+            <a-button @click="closeAddModal" :disabled="isSubmitting"> Cancel </a-button>
             <a-button
               type="primary"
               html-type="submit"
@@ -314,7 +296,7 @@ const searchQuery = ref("");
 const userList = ref([]);
 const isLoading = ref(false);
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(14);
 
 const isAddModalOpen = ref(false);
 const isSubmitting = ref(false);
@@ -390,7 +372,6 @@ const onRoleChange = () => {
   selectedStaff.value = null;
   staffOptions.value = [];
 };
-
 
 const onStaffChange = (value) => {
   selectedStaff.value =
@@ -495,9 +476,14 @@ const handleEdit = (id) => {
 const handleDelete = async (id) => {
   try {
     const res = await axios.delete(`${apiBase}/user_delete/${id}`, getTokenConfig());
-    if (res?.data?.success) {
+    const ok =
+      res?.status === 200 ||
+      res?.status === 204 ||
+      res?.data?.success === true ||
+      res?.data?.status === "success";
+    if (ok) {
       showNotification("success", res?.data?.message || "User deleted");
-      fetchUserList();
+      await fetchUserList();
     } else {
       showNotification("error", res?.data?.message || "Failed to delete user");
     }
@@ -537,7 +523,11 @@ const filteredData = () => {
       u?.dealer_code,
       u?.staff_id,
     ];
-    return fields.some((f) => String(f ?? "").toLowerCase().includes(q));
+    return fields.some((f) =>
+      String(f ?? "")
+        .toLowerCase()
+        .includes(q)
+    );
   });
 };
 

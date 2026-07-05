@@ -7,12 +7,12 @@
     mode="inline"
   >
     <!-- ================= BASIC ================= -->
-    <a-menu-item-group>
+    <a-menu-item-group v-if="showMainMenu()">
       <template #title>
         <span class="menu-group-title">Main Menu</span>
       </template>
       <!-- dashboard -->
-      <a-menu-item key="dashboard">
+      <a-menu-item v-if="hasPermission('Dashboard')" key="dashboard">
         <router-link :to="{ name: 'dashboard' }">
           <StockOutlined />
           <span>Dashboard</span>
@@ -20,7 +20,7 @@
       </a-menu-item>
 
       <!-- Settings submenu -->
-      <a-sub-menu key="settings">
+      <a-sub-menu v-if="hasPermission('Product')" key="settings">
         <template #title>
           <span class="flex items-center">
             <ShoppingOutlined />
@@ -41,7 +41,7 @@
     </a-menu-item-group>
 
     <!-- report -->
-    <a-menu-item key="report">
+    <a-menu-item v-if="hasPermission('Report')" key="report">
       <router-link :to="{ name: 'report' }">
         <BarChartOutlined />
         <span>Report</span>
@@ -49,25 +49,31 @@
     </a-menu-item>
 
     <!-- user -->
-    <a-menu-item-group>
+    <a-menu-item-group v-if="showUserMenu()">
       <template #title>
         <span class="menu-group-title">User Management</span>
       </template>
 
-      <a-menu-item key="user-management">
+      <a-menu-item
+        v-if="hasPermission('User Manager')"
+        key="user-management"
+      >
         <router-link :to="{ name: 'user-management' }">
           <TeamOutlined />
           <span>User Manager</span>
         </router-link>
       </a-menu-item>
-      <a-menu-item key="role">
+      <a-menu-item v-if="hasPermission('Role')" key="role">
         <router-link :to="{ name: 'role' }">
           <IdcardOutlined />
           <span>Role</span>
         </router-link>
       </a-menu-item>
 
-      <a-menu-item key="user-permission">
+      <a-menu-item
+        v-if="hasPermission('Permissions')"
+        key="user-permission"
+      >
         <router-link :to="{ name: 'user-permission' }">
           <SafetyOutlined />
           <span>Permissions</span>
@@ -120,10 +126,22 @@ const hasPermission = (permission) => {
   return user_permissions.value.includes(permission);
 };
 
+const hasAnyPermission = (permissions) => {
+  return permissions.some((p) => hasPermission(p));
+};
+
+const showMainMenu = () =>
+  hasAnyPermission(["Dashboard", "Product"]);
+
+const showUserMenu = () =>
+  hasAnyPermission(["User Manager", "Role", "Permissions"]);
+
 const handleLogout = (router) => {
   Cookies.remove("token");
   localStorage.removeItem("staff_id");
   localStorage.removeItem("name");
+  localStorage.removeItem("email");
+  localStorage.removeItem("role");
   localStorage.removeItem("user_permissions");
   router.push({ name: "login" });
 };

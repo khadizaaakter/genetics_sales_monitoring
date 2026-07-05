@@ -58,16 +58,16 @@
               :key="product.ProductID ?? index"
               class="border-b border-gray-100 hover:bg-gray-50"
             >
-              <td class="py-3 px-4 text-center">
+              <td class="py-2 px-4 text-center">
                 {{ (currentPage - 1) * pageSize + index + 1 }}
               </td>
-              <td class="py-3 px-4">{{ product.ProductCode ?? "-" }}</td>
-              <td class="py-3 px-4 font-medium">{{ product.ProductName ?? "-" }}</td>
-              <td class="py-3 px-4">{{ product?.category?.Category ?? "-" }}</td>
-              <td class="py-3 px-4">
+              <td class="py-2 px-4">{{ product.ProductCode ?? "-" }}</td>
+              <td class="py-2 px-4 font-medium">{{ product.ProductName ?? "-" }}</td>
+              <td class="py-2 px-4">{{ product?.category?.Category ?? "-" }}</td>
+              <td class="py-0 px-4">
                 {{ product?.category?.discount_type?.DiscountType ?? "-" }}
               </td>
-              <td class="py-3 px-4 text-center">
+              <td class="py-0 px-4 text-center">
                 <a-tag
                   :color="product.Active === 'Y' ? 'green' : 'red'"
                   class="capitalize rounded-full px-3"
@@ -75,7 +75,7 @@
                   {{ product.Active === "Y" ? "Active" : "Inactive" }}
                 </a-tag>
               </td>
-              <td class="py-3 px-4">
+              <td class="py-0 px-4">
                 <div class="flex justify-center gap-2">
                   <a-button
                     size="small"
@@ -255,7 +255,7 @@ const isLoading = ref(false);
 const products = ref([]);
 
 const currentPage = ref(1);
-const pageSize = ref(10);
+const pageSize = ref(18);
 
 const isAddModalOpen = ref(false);
 const isEditModalOpen = ref(false);
