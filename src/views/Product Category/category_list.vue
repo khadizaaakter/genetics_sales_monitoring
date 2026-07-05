@@ -124,7 +124,7 @@
             name="Category"
             :rules="[{ required: true, message: 'Please enter category name' }]"
           >
-            <a-input v-model:value="form.Category" placeholder="e.g. Mobile Phones" />
+            <a-input v-model:value="form.Category" placeholder="Enter category name" />
           </a-form-item>
 
           <a-form-item

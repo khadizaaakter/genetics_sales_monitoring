@@ -81,7 +81,7 @@
                   <a-button
                     size="small"
                     class="bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100"
-                    @click="handleEdit(user.id)"
+                    @click="openEditModal(user)"
                   >
                     <EditOutlined />
                   </a-button>
@@ -115,16 +115,16 @@
         />
       </div>
 
-      <!-- Add user Modal -->
+      <!-- Add/Edit user Modal -->
       <a-modal
-        v-model:open="isAddModalOpen"
-        title="Add User"
+        v-model:open="isUserModalOpen"
+        :title="modalMode === 'edit' ? 'Edit User' : 'Add User'"
         :footer="null"
         :destroy-on-close="true"
         :width="720"
         @cancel="resetForm"
       >
-        <a-form :model="form" layout="vertical" autocomplete="off" @finish="createUser">
+        <a-form :model="form" layout="vertical" autocomplete="off" @finish="handleSubmit">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
             <a-form-item
               label="Role"
@@ -157,7 +157,7 @@
                 :show-arrow="false"
                 :not-found-content="staffLoading ? null : 'No matches'"
                 :loading="staffLoading"
-                placeholder="Search by Staff ID (e.g. 15635)"
+                placeholder="Search by Staff ID"
                 @search="handleStaffSearch"
                 @change="onStaffChange"
               >
@@ -180,46 +180,32 @@
             </a-form-item>
 
             <a-form-item
-              label="Dealer Code"
-              name="dealer_code"
-              :rules="
-                form.role === 'Customer'
-                  ? [{ required: true, message: 'Please select a dealer code' }]
-                  : []
-              "
+              v-if="roleParentMap[form.role] && modalMode === 'add'"
+              label="Supervisor"
+              name="supervisor"
+              :rules="[
+                {
+                  required: true,
+                  type: 'array',
+                  message: `Please select a ${roleParentMap[form.role]}`,
+                },
+              ]"
             >
               <a-select
-                v-if="form.role === 'Customer'"
-                v-model:value="form.dealer_code"
-                show-search
-                :filter-option="false"
-                :default-active-first-option="false"
-                :show-arrow="false"
-                :not-found-content="staffLoading ? null : 'No matches'"
-                :loading="staffLoading"
-                placeholder="Search dealer code (e.g. GB3002P)"
-                @search="handleStaffSearch"
-                @change="onStaffChange"
+                v-model:value="form.supervisor"
+                mode="multiple"
+                :loading="supervisorLoading"
+                :not-found-content="supervisorLoading ? null : 'No matches'"
+                :placeholder="`Select ${roleParentMap[form.role]}`"
               >
-                <a-select-option
-                  v-for="s in staffOptions"
-                  :key="s.UserID"
-                  :value="s.UserID"
-                >
-                  {{ s.UserID }} - {{ s.UserName }}
+                <a-select-option v-for="o in supervisorOptions" :key="o.id" :value="o.id">
+                  {{ o.name }}
                 </a-select-option>
               </a-select>
-              <a-input
-                v-else-if="getRoleEndpoint(form.role)"
-                v-model:value="form.dealer_code"
-                placeholder="Auto-filled from selected staff"
-                readonly
-              />
-              <a-input
-                v-else
-                v-model:value="form.dealer_code"
-                placeholder="Enter dealer code"
-              />
+            </a-form-item>
+
+            <a-form-item label="Dealer Code" name="dealer_code">
+              <a-input v-model:value="form.dealer_code" placeholder="Enter dealer code" />
             </a-form-item>
 
             <a-form-item label="Shop Name" name="shop_name">
@@ -249,28 +235,36 @@
             <a-form-item
               label="Password"
               name="password"
-              :rules="[
-                { required: true, message: 'Please enter password' },
-                { min: 6, message: 'Password must be at least 6 characters' },
-              ]"
+              :rules="
+                modalMode === 'add'
+                  ? [
+                      { required: true, message: 'Please enter password' },
+                      { min: 6, message: 'Password must be at least 6 characters' },
+                    ]
+                  : [{ min: 6, message: 'Password must be at least 6 characters' }]
+              "
             >
               <a-input-password
                 v-model:value="form.password"
-                placeholder="Enter password"
+                :placeholder="
+                  modalMode === 'edit'
+                    ? 'Leave blank to keep current password'
+                    : 'Enter password'
+                "
                 autocomplete="new-password"
               />
             </a-form-item>
           </div>
 
           <div class="flex justify-end gap-2 mt-4">
-            <a-button @click="closeAddModal" :disabled="isSubmitting"> Cancel </a-button>
+            <a-button @click="closeUserModal" :disabled="isSubmitting"> Cancel </a-button>
             <a-button
               type="primary"
               html-type="submit"
               :loading="isSubmitting"
               class="bg-[#2d2d61]"
             >
-              Save
+              {{ modalMode === "edit" ? "Update" : "Save" }}
             </a-button>
           </div>
         </a-form>
@@ -284,13 +278,10 @@ import MainLayout from "@/components/layout/MainLayout.vue";
 import axios from "axios";
 import Cookies from "js-cookie";
 import { ref, reactive, onMounted, watch } from "vue";
-import { useRouter } from "vue-router";
 import { apiBase } from "@/config";
 import { getTokenConfig } from "@/utilities/tokenConfig";
 import { showNotification } from "@/utilities/notification";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons-vue";
-
-const router = useRouter();
 
 const searchQuery = ref("");
 const userList = ref([]);
@@ -298,8 +289,10 @@ const isLoading = ref(false);
 const currentPage = ref(1);
 const pageSize = ref(14);
 
-const isAddModalOpen = ref(false);
+const isUserModalOpen = ref(false);
 const isSubmitting = ref(false);
+const modalMode = ref("add"); // "add" | "edit"
+const editingUserId = ref(null);
 
 const rolesList = ref([]);
 const rolesLoading = ref(false);
@@ -311,6 +304,41 @@ const roleSearchEndpoints = {
 };
 
 const getRoleEndpoint = (role) => roleSearchEndpoints[role] || null;
+
+// Hierarchy: AM -> MO -> Dealer. Selecting Dealer shows the MO list,
+// selecting MO shows the AM list, selecting AM needs no parent list.
+const roleParentMap = {
+  Dealer: "MO",
+  MO: "AM",
+};
+
+const supervisorOptions = ref([]);
+const supervisorLoading = ref(false);
+
+const fetchSupervisorList = async (parentRole) => {
+  if (!parentRole) {
+    supervisorOptions.value = [];
+    return;
+  }
+  supervisorLoading.value = true;
+  try {
+    const token = Cookies.get("token");
+    const formData = new FormData();
+    formData.append("role", parentRole);
+    const res = await axios.post(`${apiBase}/role_wise_mo_am_list`, formData, {
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    supervisorOptions.value = Array.isArray(res?.data?.data) ? res.data.data : [];
+  } catch (error) {
+    console.error("Failed to fetch supervisor list", error?.response?.data || error);
+    supervisorOptions.value = [];
+  } finally {
+    supervisorLoading.value = false;
+  }
+};
 
 const fetchRoles = async () => {
   rolesLoading.value = true;
@@ -336,6 +364,7 @@ const defaultForm = () => ({
   staff_id: undefined,
   name: "",
   dealer_code: "",
+  supervisor: [],
   shop_name: "",
   owner_name: "",
   mobile: "",
@@ -353,24 +382,58 @@ const resetForm = () => {
   Object.assign(form, defaultForm());
   selectedStaff.value = null;
   staffOptions.value = [];
+  supervisorOptions.value = [];
+  modalMode.value = "add";
+  editingUserId.value = null;
 };
 
 const openAddModal = () => {
   resetForm();
-  isAddModalOpen.value = true;
+  isUserModalOpen.value = true;
   if (!rolesList.value.length) fetchRoles();
 };
 
-const closeAddModal = () => {
-  isAddModalOpen.value = false;
+const openEditModal = (user) => {
+  resetForm();
+  modalMode.value = "edit";
+  editingUserId.value = user?.id ?? null;
+
+  const primaryRole = user?.roles?.[0]?.name;
+  Object.assign(form, {
+    role: primaryRole,
+    staff_id: user?.staff_id || undefined,
+    name: user?.name || "",
+    dealer_code: user?.user_id || "",
+    supervisor: Array.isArray(user?.supervisor) ? user.supervisor : [],
+    shop_name: user?.shop_name || "",
+    owner_name: user?.owner_name || "",
+    mobile: user?.mobile || "",
+    email: user?.email || "",
+    password: "",
+  });
+
+  isUserModalOpen.value = true;
+  if (!rolesList.value.length) fetchRoles();
+  if (roleParentMap[primaryRole]) {
+    fetchSupervisorList(roleParentMap[primaryRole]);
+  }
+};
+
+const closeUserModal = () => {
+  isUserModalOpen.value = false;
 };
 
 const onRoleChange = () => {
   form.staff_id = undefined;
   form.dealer_code = "";
+  form.supervisor = [];
   form.name = "";
   selectedStaff.value = null;
   staffOptions.value = [];
+  supervisorOptions.value = [];
+  if (roleParentMap[form.role]) {
+    fetchSupervisorList(roleParentMap[form.role]);
+  }
 };
 
 const onStaffChange = (value) => {
@@ -443,6 +506,9 @@ const createUser = async () => {
       password: form.password,
       role: form.role,
     };
+    if (roleParentMap[form.role]) {
+      payload.supervisor = form.supervisor;
+    }
     if (getRoleEndpoint(form.role) && form.role !== "Customer") {
       payload.staff_id = form.staff_id || "";
     }
@@ -454,7 +520,7 @@ const createUser = async () => {
     });
     if (res?.status === 200 || res?.status === 201) {
       showNotification("success", res?.data?.message || "User created");
-      closeAddModal();
+      closeUserModal();
       fetchUserList();
     } else {
       showNotification("error", res?.data?.message || "Failed to create user");
@@ -469,8 +535,53 @@ const createUser = async () => {
   }
 };
 
-const handleEdit = (id) => {
-  router.push({ name: "user-edit", params: { id } });
+const updateUser = async () => {
+  if (!editingUserId.value) return;
+  isSubmitting.value = true;
+  try {
+    const payload = {
+      name: form.name,
+      email: form.email,
+      dealer_code: form.dealer_code,
+      shop_name: form.shop_name,
+      owner_name: form.owner_name,
+      mobile: form.mobile,
+      role: form.role,
+    };
+    if (getRoleEndpoint(form.role) && form.role !== "Customer") {
+      payload.staff_id = form.staff_id || "";
+    }
+    if (form.password) {
+      payload.password = form.password;
+    }
+    const res = await axios.put(
+      `${apiBase}/user_update/${editingUserId.value}`,
+      payload,
+      getTokenConfig()
+    );
+    if (res?.status === 200 || res?.status === 201) {
+      showNotification("success", res?.data?.message || "User updated");
+      closeUserModal();
+      fetchUserList();
+    } else {
+      showNotification("error", res?.data?.message || "Failed to update user");
+    }
+  } catch (error) {
+    showNotification(
+      "error",
+      error?.response?.data?.message || error?.message || "Something went wrong"
+    );
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+const handleSubmit = () => {
+  if (modalMode.value === "edit") {
+    updateUser();
+  } else {
+    createUser();
+  }
 };
 
 const handleDelete = async (id) => {

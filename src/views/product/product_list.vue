@@ -128,7 +128,7 @@
             name="ProductCode"
             :rules="[{ required: true, message: 'Please enter product code' }]"
           >
-            <a-input v-model:value="form.ProductCode" placeholder="e.g. Mobile Phones" />
+            <a-input v-model:value="form.ProductCode" placeholder="Enter product code" />
           </a-form-item>
 
           <a-form-item
@@ -136,7 +136,7 @@
             name="ProductName"
             :rules="[{ required: true, message: 'Please enter product name' }]"
           >
-            <a-input v-model:value="form.ProductName" placeholder="e.g. iPhone 13" />
+            <a-input v-model:value="form.ProductName" placeholder="Enter product name" />
           </a-form-item>
 
           <a-form-item
