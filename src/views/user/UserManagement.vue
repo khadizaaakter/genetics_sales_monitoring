@@ -29,7 +29,7 @@
         <table class="min-w-full text-sm">
           <thead>
             <tr class="bg-[#f8f9fc] text-gray-600 font-semibold border-b border-gray-200">
-              <th class="py-3 px-4 text-center w-16">SL</th>
+              <th class="py-3 px-4 text-center w-16">ID</th>
               <th class="py-3 px-4">Name</th>
               <th class="py-3 px-4">Staff ID</th>
               <th class="py-3 px-4">Shop Name</th>
@@ -38,7 +38,7 @@
               <th class="py-3 px-4">Email</th>
               <th class="py-3 px-4">Mobile</th>
               <th class="py-3 px-4">Role</th>
-              <th class="py-3 px-4">Permission</th>
+              <!-- <th class="py-3 px-4">Permission</th> -->
               <th class="py-3 px-4">Actions</th>
             </tr>
           </thead>
@@ -61,7 +61,7 @@
               class="border-b border-gray-100 hover:bg-gray-50"
             >
               <td class="text-center">
-                {{ (currentPage - 1) * pageSize + index + 1 }}
+                {{ user?.id }}
               </td>
               <td class="text-center">{{ user?.name }}</td>
               <td class="text-center">{{ user?.staff_id || "-" }}</td>
@@ -73,9 +73,9 @@
               <td class="text-center">
                 {{ user?.roles?.map((r) => r.name).join(", ") || "-" }}
               </td>
-              <td class="text-center">
+              <!-- <td class="text-center">
                 {{ user?.permissions?.map((p) => p.name).join(", ") || "-" }}
-              </td>
+              </td> -->
               <td class="py-3 px-4">
                 <div class="flex justify-center gap-2">
                   <a-button
@@ -180,7 +180,7 @@
             </a-form-item>
 
             <a-form-item
-              v-if="roleParentMap[form.role] && modalMode === 'add'"
+              v-if="roleParentMap[form.role]"
               label="Supervisor"
               name="supervisor"
               :rules="[
@@ -393,29 +393,42 @@ const openAddModal = () => {
   if (!rolesList.value.length) fetchRoles();
 };
 
-const openEditModal = (user) => {
+const isEditLoading = ref(false);
+
+const openEditModal = async (user) => {
   resetForm();
   modalMode.value = "edit";
   editingUserId.value = user?.id ?? null;
-
-  const primaryRole = user?.roles?.[0]?.name;
-  Object.assign(form, {
-    role: primaryRole,
-    staff_id: user?.staff_id || undefined,
-    name: user?.name || "",
-    dealer_code: user?.user_id || "",
-    supervisor: Array.isArray(user?.supervisor) ? user.supervisor : [],
-    shop_name: user?.shop_name || "",
-    owner_name: user?.owner_name || "",
-    mobile: user?.mobile || "",
-    email: user?.email || "",
-    password: "",
-  });
-
   isUserModalOpen.value = true;
   if (!rolesList.value.length) fetchRoles();
-  if (roleParentMap[primaryRole]) {
-    fetchSupervisorList(roleParentMap[primaryRole]);
+
+  isEditLoading.value = true;
+  try {
+    const res = await axios.get(`${apiBase}/user_show/${user.id}`, getTokenConfig());
+    const info = res?.data?.result;
+    const primaryRole = info?.role || info?.roles?.[0]?.name;
+    Object.assign(form, {
+      role: primaryRole,
+      staff_id: info?.staff_id || undefined,
+      name: info?.name || "",
+      dealer_code: info?.user_id || "",
+      supervisor: Array.isArray(info?.supervisor) ? info.supervisor : [],
+      shop_name: info?.shop_name || "",
+      owner_name: info?.owner_name || "",
+      mobile: info?.mobile || "",
+      email: info?.email || "",
+      password: "",
+    });
+    if (roleParentMap[primaryRole]) {
+      fetchSupervisorList(roleParentMap[primaryRole]);
+    }
+  } catch (error) {
+    showNotification(
+      "error",
+      error?.response?.data?.message || error?.message || "Failed to load user details"
+    );
+  } finally {
+    isEditLoading.value = false;
   }
 };
 
@@ -548,6 +561,9 @@ const updateUser = async () => {
       mobile: form.mobile,
       role: form.role,
     };
+    if (roleParentMap[form.role]) {
+      payload.supervisor = form.supervisor;
+    }
     if (getRoleEndpoint(form.role) && form.role !== "Customer") {
       payload.staff_id = form.staff_id || "";
     }
