@@ -147,9 +147,23 @@
               v-if="getRoleEndpoint(form.role) && form.role !== 'Customer'"
               label="Staff ID"
               name="staff_id"
-              :rules="[{ required: true, message: 'Please select a staff' }]"
+              :rules="[
+                {
+                  required: true,
+                  message:
+                    modalMode === 'add'
+                      ? 'Please enter staff ID'
+                      : 'Please select a staff',
+                },
+              ]"
             >
+              <a-input
+                v-if="modalMode === 'add'"
+                v-model:value="form.staff_id"
+                placeholder="Enter Staff ID"
+              />
               <a-select
+                v-else
                 v-model:value="form.staff_id"
                 show-search
                 :filter-option="false"
@@ -204,11 +218,19 @@
               </a-select>
             </a-form-item>
 
-            <a-form-item label="Dealer Code" name="dealer_code">
+            <a-form-item
+              label="Dealer Code"
+              name="dealer_code"
+              :rules="[{ required: true, message: 'Please enter dealer code' }]"
+            >
               <a-input v-model:value="form.dealer_code" placeholder="Enter dealer code" />
             </a-form-item>
 
-            <a-form-item label="Shop Name" name="shop_name">
+            <a-form-item
+              label="Shop Name"
+              name="shop_name"
+              :rules="[{ required: true, message: 'Please enter shop name' }]"
+            >
               <a-input v-model:value="form.shop_name" placeholder="Enter shop name" />
             </a-form-item>
 
@@ -216,7 +238,11 @@
               <a-input v-model:value="form.owner_name" placeholder="Enter owner name" />
             </a-form-item>
 
-            <a-form-item label="Mobile" name="mobile">
+            <a-form-item
+              label="Mobile"
+              name="mobile"
+              :rules="[{ required: true, message: 'Please enter mobile number' }]"
+            >
               <a-input v-model:value="form.mobile" placeholder="Enter mobile number" />
             </a-form-item>
 
@@ -237,11 +263,8 @@
               name="password"
               :rules="
                 modalMode === 'add'
-                  ? [
-                      { required: true, message: 'Please enter password' },
-                      { min: 6, message: 'Password must be at least 6 characters' },
-                    ]
-                  : [{ min: 6, message: 'Password must be at least 6 characters' }]
+                  ? [{ required: true, message: 'Please enter password' }]
+                  : []
               "
             >
               <a-input-password
