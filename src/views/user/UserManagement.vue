@@ -143,6 +143,123 @@
               </a-select>
             </a-form-item>
 
+            <!-- <a-form-item
+              v-if="getRoleEndpoint(form.role) && form.role !== 'Customer'"
+              label="Staff ID"
+              name="staff_id"
+              :rules="[
+                {
+                  required: true,
+                  message:
+                    modalMode === 'add'
+                      ? 'Please enter staff ID'
+                      : 'Please select a staff',
+                },
+              ]"
+            >
+              <a-input
+                v-if="modalMode === 'add'"
+                v-model:value="form.staff_id"
+                placeholder="Enter Staff ID"
+              />
+              <a-select
+                v-else
+                v-model:value="form.staff_id"
+                show-search
+                :filter-option="false"
+                :default-active-first-option="false"
+                :show-arrow="false"
+                :not-found-content="staffLoading ? null : 'No matches'"
+                :loading="staffLoading"
+                placeholder="Search by Staff ID"
+                @search="handleStaffSearch"
+                @change="onStaffChange"
+              >
+                <a-select-option
+                  v-for="s in staffOptions"
+                  :key="s.UserID"
+                  :value="s.StaffID"
+                >
+                  {{ s.StaffID }} - {{ s.UserName }}
+                </a-select-option>
+              </a-select>
+            </a-form-item> -->
+
+            <a-form-item
+              label="Name"
+              name="name"
+              :rules="[{ required: true, message: 'Please enter name' }]"
+            >
+              <a-input v-model:value="form.name" placeholder="Enter name" />
+            </a-form-item>
+
+            <a-form-item
+              v-if="!hideDealerInfo"
+              label="Dealer Code"
+              name="dealer_code"
+              :rules="[{ required: true, message: 'Please enter dealer code' }]"
+            >
+              <a-input v-model:value="form.dealer_code" placeholder="Enter dealer code" />
+            </a-form-item>
+
+            <a-form-item
+              v-if="!hideDealerInfo"
+              label="Shop Name"
+              name="shop_name"
+              :rules="[{ required: false, message: 'Please enter shop name' }]"
+            >
+              <a-input v-model:value="form.shop_name" placeholder="Enter shop name" />
+            </a-form-item>
+
+            <a-form-item v-if="!hideDealerInfo" label="Owner Name" name="owner_name">
+              <a-input v-model:value="form.owner_name" placeholder="Enter owner name" />
+            </a-form-item>
+
+            <a-form-item
+              label="Mobile"
+              name="mobile"
+              :rules="[{ required: true, message: 'Please enter mobile number' }]"
+            >
+              <a-input v-model:value="form.mobile" placeholder="Enter mobile number" />
+            </a-form-item>
+
+            <a-form-item
+              label="Email"
+              name="email"
+              :rules="[{ type: 'email', message: 'Please enter a valid email' }]"
+            >
+              <a-input
+                v-model:value="form.email"
+                placeholder="Enter email"
+                autocomplete="off"
+              />
+            </a-form-item>
+
+            <a-form-item
+              v-if="roleParentMap[form.role]"
+              label="Supervisor"
+              name="supervisor"
+              :rules="[
+                {
+                  required: true,
+                  type: 'array',
+                  message: `Please select a ${roleParentMap[form.role]}`,
+                },
+              ]"
+            >
+              <a-select
+                v-model:value="form.supervisor"
+                mode="multiple"
+                :loading="supervisorLoading"
+                :not-found-content="supervisorLoading ? null : 'No matches'"
+                :placeholder="`Select ${roleParentMap[form.role]}`"
+              >
+                <a-select-option v-for="o in supervisorOptions" :key="o.id" :value="o.id">
+                  {{ o.name }}
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+
             <a-form-item
               v-if="getRoleEndpoint(form.role) && form.role !== 'Customer'"
               label="Staff ID"
@@ -183,79 +300,6 @@
                   {{ s.StaffID }} - {{ s.UserName }}
                 </a-select-option>
               </a-select>
-            </a-form-item>
-
-            <a-form-item
-              label="Name"
-              name="name"
-              :rules="[{ required: true, message: 'Please enter name' }]"
-            >
-              <a-input v-model:value="form.name" placeholder="Enter name" />
-            </a-form-item>
-
-            <a-form-item
-              v-if="roleParentMap[form.role]"
-              label="Supervisor"
-              name="supervisor"
-              :rules="[
-                {
-                  required: true,
-                  type: 'array',
-                  message: `Please select a ${roleParentMap[form.role]}`,
-                },
-              ]"
-            >
-              <a-select
-                v-model:value="form.supervisor"
-                mode="multiple"
-                :loading="supervisorLoading"
-                :not-found-content="supervisorLoading ? null : 'No matches'"
-                :placeholder="`Select ${roleParentMap[form.role]}`"
-              >
-                <a-select-option v-for="o in supervisorOptions" :key="o.id" :value="o.id">
-                  {{ o.name }}
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-
-            <a-form-item
-              label="Dealer Code"
-              name="dealer_code"
-              :rules="[{ required: true, message: 'Please enter dealer code' }]"
-            >
-              <a-input v-model:value="form.dealer_code" placeholder="Enter dealer code" />
-            </a-form-item>
-
-            <a-form-item
-              label="Shop Name"
-              name="shop_name"
-              :rules="[{ required: true, message: 'Please enter shop name' }]"
-            >
-              <a-input v-model:value="form.shop_name" placeholder="Enter shop name" />
-            </a-form-item>
-
-            <a-form-item label="Owner Name" name="owner_name">
-              <a-input v-model:value="form.owner_name" placeholder="Enter owner name" />
-            </a-form-item>
-
-            <a-form-item
-              label="Mobile"
-              name="mobile"
-              :rules="[{ required: true, message: 'Please enter mobile number' }]"
-            >
-              <a-input v-model:value="form.mobile" placeholder="Enter mobile number" />
-            </a-form-item>
-
-            <a-form-item
-              label="Email"
-              name="email"
-              :rules="[{ type: 'email', message: 'Please enter a valid email' }]"
-            >
-              <a-input
-                v-model:value="form.email"
-                placeholder="Enter email"
-                autocomplete="off"
-              />
             </a-form-item>
 
             <a-form-item
@@ -300,7 +344,7 @@
 import MainLayout from "@/components/layout/MainLayout.vue";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { ref, reactive, onMounted, watch } from "vue";
+import { ref, reactive, computed, onMounted, watch } from "vue";
 import { apiBase } from "@/config";
 import { getTokenConfig } from "@/utilities/tokenConfig";
 import { showNotification } from "@/utilities/notification";
@@ -314,7 +358,7 @@ const pageSize = ref(14);
 
 const isUserModalOpen = ref(false);
 const isSubmitting = ref(false);
-const modalMode = ref("add"); // "add" | "edit"
+const modalMode = ref("add");
 const editingUserId = ref(null);
 
 const rolesList = ref([]);
@@ -327,6 +371,9 @@ const roleSearchEndpoints = {
 };
 
 const getRoleEndpoint = (role) => roleSearchEndpoints[role] || null;
+
+// Dealer code, shop name and owner name only apply to Dealer/Customer roles.
+const hideDealerInfo = computed(() => ["MO", "AM"].includes(form.role));
 
 // Hierarchy: AM -> MO -> Dealer. Selecting Dealer shows the MO list,
 // selecting MO shows the AM list, selecting AM needs no parent list.
@@ -462,6 +509,8 @@ const closeUserModal = () => {
 const onRoleChange = () => {
   form.staff_id = undefined;
   form.dealer_code = "";
+  form.shop_name = "";
+  form.owner_name = "";
   form.supervisor = [];
   form.name = "";
   selectedStaff.value = null;
