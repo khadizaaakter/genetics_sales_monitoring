@@ -14,6 +14,7 @@ import ProductCategory from "./views/Product Category/category_list.vue";
 import Product_list from "./views/product/product_list.vue";
 import Dashboard from "./views/dashboard/dashboard.vue";
 import Report from "./views/report/report.vue";
+import RegisteredDealer from "./views/report/registered_dealer.vue";
 
 const routes = [
   {
@@ -56,6 +57,11 @@ const routes = [
     path: "/report",
     name: "report",
     component: Report,
+  },
+  {
+    path: "/registered-dealer-report",
+    name: "registered-dealer",
+    component: RegisteredDealer,
   },
   {
     path: "/update-user-permission/:id",

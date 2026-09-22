@@ -3,10 +3,13 @@
     <div class="md:px-10 md:pt-10 pb-4 relative z-20">
       <!-- Search and Add Permissions Section -->
       <div class="md:flex justify-between mb-3 mt-4 mt:mt-0">
-        <a-input
+        <a-input-search
+          v-model:value="searchInput"
           placeholder="Search Permission..."
+          :maxlength="SEARCH_MAX_LENGTH"
+          allow-clear
           class="w-[300px]"
-          @input="searchList($event.target.value)"
+          @paste="handleSearchPaste"
         />
 
         <div class="flex space-x-2 mt-2 md:mt-0">
@@ -68,15 +71,20 @@
               <td colspan="6" class="py-4 text-center"><a-spin /></td>
             </tr>
             <tr
-              v-if="!isLoading && permissionList.length === 0"
+              v-if="!isLoading && filteredPermissions().length === 0"
               class="border-b border-gray-300"
             >
               <td colspan="5" class="py-4 text-center">
-                <a-empty description="No Permissions Found" class="my-8" />
+                <a-empty
+                  :description="
+                    searchQuery ? 'No matching permissions found' : 'No Permissions Found'
+                  "
+                  class="my-8"
+                />
               </td>
             </tr>
             <tr
-              v-for="(permission, index) in permissionList"
+              v-for="(permission, index) in filteredPermissions()"
               :key="index"
               :class="{ 'bg-gray-50': index % 2 === 0 }"
               class="border-b border-gray-300"
@@ -122,7 +130,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import MainLayout from "@/components/layout/MainLayout.vue";
 import {
@@ -144,16 +152,59 @@ const isEditModalVisible = ref(false);
 const form = ref({ name: "" });
 const isLoading = ref(false);
 const permissionList = ref([]);
-const backupList = ref([]);
 const isDeleting = ref({});
 
-// Search
-const searchList = (query) => {
-  permissionList.value = query
-    ? backupList.value.filter((permission) =>
-        permission.name.toLowerCase().includes(query.toLowerCase())
-      )
-    : backupList.value;
+// searchInput is what the user is typing; searchQuery is the normalized value
+// used for filtering, updated live as the user types.
+const SEARCH_MAX_LENGTH = 12;
+const searchInput = ref("");
+const searchQuery = ref("");
+
+// Normalizes text for comparison: unicode-normalize, strip zero-width chars
+// (common in copy-paste), collapse any whitespace (incl. NBSP/tabs/newlines)
+// to a single space, trim, and lowercase.
+const cleanText = (value) =>
+  String(value ?? "")
+    .normalize("NFKC")
+    .replace(/[​-‍⁠﻿]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const normalizeText = (value) => cleanText(value).toLowerCase();
+
+watch(searchInput, (value) => {
+  // Clean pasted/typed text before applying the 12-char limit, so leading
+  // spaces or hidden characters don't eat into it. The trailing space is kept
+  // so the user can type a second word.
+  const raw = String(value ?? "");
+  const cleaned = cleanText(raw);
+  const trailingSpace = /\s$/.test(raw) && cleaned ? " " : "";
+  const limited = (cleaned + trailingSpace).slice(0, SEARCH_MAX_LENGTH);
+
+  if (limited !== raw) {
+    searchInput.value = limited;
+    return;
+  }
+  searchQuery.value = normalizeText(limited);
+});
+
+// Pasting replaces the previous search instead of being inserted into it
+// (and isn't blocked by maxlength when the box is already full).
+const handleSearchPaste = (event) => {
+  const pasted = event.clipboardData?.getData("text");
+  if (!pasted) return;
+  event.preventDefault();
+  searchInput.value = cleanText(pasted).slice(0, SEARCH_MAX_LENGTH);
+};
+
+// Search (partial, case-insensitive, whitespace-normalized) on permission name.
+// Filters from the full list, so the search stays applied after the list reloads.
+const filteredPermissions = () => {
+  const q = searchQuery.value;
+  if (!q) return permissionList.value;
+  return permissionList.value.filter((permission) =>
+    normalizeText(permission?.name).includes(q)
+  );
 };
 
 // permission list
@@ -169,16 +220,15 @@ const getPermission = async () => {
   try {
     const response = await axios.get(`${apiBase}/permissions`, config);
     if (response?.status == 200 && response?.data?.status === "Success") {
-      permissionList.value = response?.data?.permissions;
-      backupList.value = response?.data?.permissions;
+      permissionList.value = Array.isArray(response?.data?.permissions)
+        ? response.data.permissions
+        : [];
     } else {
       permissionList.value = [];
-      backupList.value = [];
     }
   } catch (error) {
     console.error("Error fetching permissions:", error);
     permissionList.value = [];
-    backupList.value = [];
     showNotification(
       "error",
       error?.message || "An error occurred while fetching data."

@@ -2,10 +2,13 @@
   <MainLayout>
     <div class="md:px-10 md:pt-10 pb-4 relative z-20">
       <div class="md:flex justify-between mb-3 mt-4 mt:mt-0">
-        <a-input
-          @input="searchList($event.target.value)"
-          placeholder="Search User..."
+        <a-input-search
+          v-model:value="searchInput"
+          placeholder="Search by role or permission..."
+          :maxlength="SEARCH_MAX_LENGTH"
+          allow-clear
           class="w-[300px]"
+          @paste="handleSearchPaste"
         />
 
         <div class="flex space-x-2 mt-2 md:mt-0">
@@ -86,15 +89,18 @@
               <td colspan="6" class="py-4 text-center"><a-spin /></td>
             </tr>
             <tr
-              v-if="!isLoading && roles.length === 0"
+              v-if="!isLoading && filteredRoles().length === 0"
               class="border-b border-gray-300"
             >
               <td colspan="5" class="py-4 text-center">
-                <a-empty description="No roles Found" class="my-8" />
+                <a-empty
+                  :description="searchQuery ? 'No matching roles found' : 'No roles Found'"
+                  class="my-8"
+                />
               </td>
             </tr>
             <tr
-              v-for="(role, index) in roles"
+              v-for="(role, index) in filteredRoles()"
               :key="index"
               :class="{ 'bg-gray-50': index % 2 === 0 }"
               class="border-b border-gray-300"
@@ -160,7 +166,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 import MainLayout from "@/components/layout/MainLayout.vue";
 import {
   PlusOutlined,
@@ -180,7 +186,6 @@ const router = useRouter();
 const isModalVisible = ref(false);
 const isEditMode = ref(false);
 const isDeleting = ref({});
-const backupList = ref([]);
 const permissionList = ref(null);
 
 const formData = ref({
@@ -190,12 +195,62 @@ const formData = ref({
 
 const roles = ref([]);
 
-const searchList = (query) => {
-  roles.value = query
-    ? backupList.value.filter((role) =>
-        role.name.toLowerCase().includes(query.toLowerCase())
+// searchInput is what the user is typing; searchQuery is the normalized value
+// used for filtering, updated live as the user types.
+const SEARCH_MAX_LENGTH = 12;
+const searchInput = ref("");
+const searchQuery = ref("");
+
+// Normalizes text for comparison: unicode-normalize, strip zero-width chars
+// (common in copy-paste), collapse any whitespace (incl. NBSP/tabs/newlines)
+// to a single space, trim, and lowercase.
+const cleanText = (value) =>
+  String(value ?? "")
+    .normalize("NFKC")
+    .replace(/[​-‍⁠﻿]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const normalizeText = (value) => cleanText(value).toLowerCase();
+
+watch(searchInput, (value) => {
+  // Clean pasted/typed text before applying the 12-char limit, so leading
+  // spaces or hidden characters don't eat into it. The trailing space is kept
+  // so the user can type a second word.
+  const raw = String(value ?? "");
+  const cleaned = cleanText(raw);
+  const trailingSpace = /\s$/.test(raw) && cleaned ? " " : "";
+  const limited = (cleaned + trailingSpace).slice(0, SEARCH_MAX_LENGTH);
+
+  if (limited !== raw) {
+    searchInput.value = limited;
+    return;
+  }
+  searchQuery.value = normalizeText(limited);
+});
+
+// Pasting replaces the previous search instead of being inserted into it
+// (and isn't blocked by maxlength when the box is already full).
+const handleSearchPaste = (event) => {
+  const pasted = event.clipboardData?.getData("text");
+  if (!pasted) return;
+  event.preventDefault();
+  searchInput.value = cleanText(pasted).slice(0, SEARCH_MAX_LENGTH);
+};
+
+// Search (partial, case-insensitive, whitespace-normalized) on role name and
+// permission names. Filters from the full list, so the search stays applied
+// after the list reloads.
+const filteredRoles = () => {
+  const q = searchQuery.value;
+  if (!q) return roles.value;
+  return roles.value.filter(
+    (role) =>
+      normalizeText(role?.name).includes(q) ||
+      role?.permissions?.some((permission) =>
+        normalizeText(permission?.name).includes(q)
       )
-    : backupList.value;
+  );
 };
 
 // roll list
@@ -212,13 +267,11 @@ const fetchData = async () => {
     isLoading.value = false;
     if (response?.status == 200 && response?.data?.status === "Success") {
       console.log(response?.data);
-      roles.value = response?.data?.role;
-      backupList.value = response?.data?.role;
+      roles.value = Array.isArray(response?.data?.role) ? response.data.role : [];
     }
   } catch (error) {
     isLoading.value = false;
     roles.value = [];
-    backupList.value = [];
   }
 };
 

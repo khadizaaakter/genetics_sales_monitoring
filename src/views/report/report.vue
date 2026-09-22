@@ -10,20 +10,23 @@
         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 bg-white rounded-lg mb-4"
       >
         <div>
-          <label class="block text-sm font-medium text-gray-600 mb-1">Dealer Code</label>
+          <label class="block text-sm font-medium text-gray-600 mb-1">Product Code</label>
           <a-input
-            v-model:value="dealerCode"
-            placeholder="Enter a Dealer Code"
+            v-model:value="productCodeInput"
+            placeholder="Enter a Product Code"
+            :maxlength="SEARCH_MAX_LENGTH"
             allow-clear
-            @press-enter="loadReport"
+            @paste="handleProductCodePaste"
           />
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-600 mb-1">LA ID</label>
           <a-input
-            v-model:value="laid"
+            v-model:value="laidInput"
             placeholder="Enter LA ID"
+            :maxlength="SEARCH_MAX_LENGTH"
             allow-clear
+            @paste="handleLaidPaste"
             @press-enter="loadReport"
           />
         </div>
@@ -83,7 +86,7 @@
                 <a-spin />
               </td>
             </tr>
-            <tr v-else-if="!rows.length">
+            <tr v-else-if="!filteredRows().length">
               <td colspan="12" class="py-6 text-center">
                 <a-empty description="No records found" />
               </td>
@@ -117,7 +120,7 @@
               </td>
             </tr>
           </tbody>
-          <tfoot v-if="rows.length">
+          <tfoot v-if="filteredRows().length">
             <tr class="bg-gray-50 font-semibold border-t border-gray-300">
               <td class="py-3 px-3 text-right" colspan="6">Total</td>
               <td class="py-3 px-3 text-right">
@@ -144,11 +147,11 @@
       </div>
 
       <!-- Pagination -->
-      <div v-if="rows.length" class="flex justify-end mt-4">
+      <div v-if="filteredRows().length" class="flex justify-end mt-4">
         <a-pagination
           v-model:current="currentPage"
           v-model:page-size="pageSize"
-          :total="rows.length"
+          :total="filteredRows().length"
           :show-size-changer="true"
           :page-size-options="['10', '20', '50', '100']"
         />
@@ -158,15 +161,64 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, watch, onMounted } from "vue";
 import axios from "axios";
 import Cookies from "js-cookie";
 import MainLayout from "@/components/layout/MainLayout.vue";
 import { apiBase } from "@/config";
 import { showNotification } from "@/utilities/notification";
 
-const dealerCode = ref("");
-const laid = ref("");
+// *Input is what the user is typing; *Query is the normalized value used for
+// filtering, updated live as the user types.
+const SEARCH_MAX_LENGTH = 15;
+const productCodeInput = ref("");
+const productCodeQuery = ref("");
+const laidInput = ref("");
+const laidQuery = ref("");
+
+// Normalizes text for comparison: unicode-normalize, strip zero-width chars
+// (common in copy-paste), collapse any whitespace (incl. NBSP/tabs/newlines)
+// to a single space, trim, and lowercase.
+const cleanText = (value) =>
+  String(value ?? "")
+    .normalize("NFKC")
+    .replace(/[​-‍⁠﻿]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const normalizeText = (value) => cleanText(value).toLowerCase();
+
+// Cleans pasted/typed text before applying the 15-char limit, so leading spaces
+// or hidden characters don't eat into it. The trailing space is kept so the
+// user can type a second word.
+const limitSearchInput = (inputRef, queryRef) => (value) => {
+  const raw = String(value ?? "");
+  const cleaned = cleanText(raw);
+  const trailingSpace = /\s$/.test(raw) && cleaned ? " " : "";
+  const limited = (cleaned + trailingSpace).slice(0, SEARCH_MAX_LENGTH);
+
+  if (limited !== raw) {
+    inputRef.value = limited;
+    return;
+  }
+  queryRef.value = normalizeText(limited);
+};
+
+watch(productCodeInput, limitSearchInput(productCodeInput, productCodeQuery));
+watch(laidInput, limitSearchInput(laidInput, laidQuery));
+
+// Pasting replaces the previous search instead of being inserted into it
+// (and isn't blocked by maxlength when the box is already full).
+const pasteIntoSearch = (inputRef) => (event) => {
+  const pasted = event.clipboardData?.getData("text");
+  if (!pasted) return;
+  event.preventDefault();
+  inputRef.value = cleanText(pasted).slice(0, SEARCH_MAX_LENGTH);
+};
+
+const handleProductCodePaste = pasteIntoSearch(productCodeInput);
+const handleLaidPaste = pasteIntoSearch(laidInput);
+
 const fromDate = ref(null);
 const toDate = ref(null);
 const rows = ref([]);
@@ -175,21 +227,34 @@ const hasLoadedOnce = ref(false);
 const currentPage = ref(1);
 const pageSize = ref(18);
 
-const paginatedRows = () => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  return rows.value.slice(start, start + pageSize.value);
+// The API ignores a product code, so it is matched here against the loaded
+// rows. LA ID and the dates are filtered by the API on Load.
+const filteredRows = () => {
+  const code = productCodeQuery.value;
+  if (!code) return rows.value;
+  return rows.value.filter((r) => normalizeText(r?.ProductCode).includes(code));
 };
 
+const paginatedRows = () => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  return filteredRows().slice(start, start + pageSize.value);
+};
+
+// A narrower product code can leave the current page empty.
+watch(productCodeQuery, () => {
+  currentPage.value = 1;
+});
+
 const resetFilters = () => {
-  dealerCode.value = "";
-  laid.value = "";
+  productCodeInput.value = "";
+  laidInput.value = "";
   fromDate.value = null;
   toDate.value = null;
   loadReport();
 };
 
 const sumField = (field) =>
-  rows.value.reduce((acc, r) => acc + (Number(r?.[field]) || 0), 0);
+  filteredRows().reduce((acc, r) => acc + (Number(r?.[field]) || 0), 0);
 
 const formatDate = (value) => {
   if (!value) return "";
@@ -216,8 +281,7 @@ const loadReport = async () => {
   try {
     const token = Cookies.get("token");
     const payload = {
-      dealer_code: dealerCode.value?.trim() || "",
-      laid: laid.value?.trim() || "",
+      laid: laidQuery.value,
       from_date: fromDate.value || "",
       to_date: toDate.value || "",
     };

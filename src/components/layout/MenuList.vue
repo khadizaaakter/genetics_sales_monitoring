@@ -41,12 +41,24 @@
     </a-menu-item-group>
 
     <!-- report -->
-    <a-menu-item v-if="hasPermission('Report')" key="report">
-      <router-link :to="{ name: 'report' }">
-        <BarChartOutlined />
-        <span>Report</span>
-      </router-link>
-    </a-menu-item>
+    <a-sub-menu v-if="hasPermission('Report')" key="reports">
+      <template #title>
+        <span class="flex items-center">
+          <BarChartOutlined />
+          <span class="ml-2">Report</span>
+        </span>
+      </template>
+      <a-menu-item key="report">
+        <router-link :to="{ name: 'report' }">
+          <span>Dealer Wise LA Sales Report</span>
+        </router-link>
+      </a-menu-item>
+      <a-menu-item key="registered-dealer">
+        <router-link :to="{ name: 'registered-dealer' }">
+          <span>Registered Dealer</span>
+        </router-link>
+      </a-menu-item>
+    </a-sub-menu>
 
     <!-- user -->
     <a-menu-item-group v-if="showUserMenu()">
@@ -116,6 +128,8 @@ const openKeys = ref([]);
 const routeToSubmenu = {
   "product-category": "settings",
   "product-list": "settings",
+  report: "reports",
+  "registered-dealer": "reports",
 };
 
 const user_permissions = ref(

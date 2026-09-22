@@ -18,12 +18,26 @@
       <div
         class="flex flex-wrap items-center justify-between gap-3 mb-4 bg-white rounded-lg"
       >
-        <a-input-search
-          v-model:value="searchQuery"
-          placeholder="Search product name or code..."
-          class="md:w-72 w-full"
-          allow-clear
-        />
+        <div class="flex flex-wrap items-center gap-3">
+          <a-input-search
+            v-model:value="searchInput"
+            placeholder="Search code, name, category or discount type..."
+            :maxlength="SEARCH_MAX_LENGTH"
+            class="md:w-80 w-full"
+            allow-clear
+            @paste="handleSearchPaste"
+          />
+
+          <a-select
+            v-model:value="statusFilter"
+            class="md:w-40 w-full"
+            placeholder="Status"
+          >
+            <a-select-option value="all">All Status</a-select-option>
+            <a-select-option value="Y">Active</a-select-option>
+            <a-select-option value="N">Inactive</a-select-option>
+          </a-select>
+        </div>
       </div>
 
       <!-- Table -->
@@ -250,7 +264,52 @@ import { apiBase } from "@/config";
 import { getTokenConfig } from "@/utilities/tokenConfig";
 import { showNotification } from "@/utilities/notification";
 
+// searchInput is what the user is typing; searchQuery is the normalized value
+// used for filtering, updated live as the user types.
+const SEARCH_MAX_LENGTH = 15;
+const searchInput = ref("");
 const searchQuery = ref("");
+
+// Normalizes text for comparison: unicode-normalize, strip zero-width chars
+// (common in copy-paste), collapse any whitespace (incl. NBSP/tabs/newlines)
+// to a single space, trim, and lowercase.
+const cleanText = (value) =>
+  String(value ?? "")
+    .normalize("NFKC")
+    .replace(/[​-‍⁠﻿]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const normalizeText = (value) => cleanText(value).toLowerCase();
+
+watch(searchInput, (value) => {
+  // Clean pasted/typed text before applying the 15-char limit, so leading
+  // spaces or hidden characters don't eat into it. The trailing space is kept
+  // so the user can type a second word.
+  const raw = String(value ?? "");
+  const cleaned = cleanText(raw);
+  const trailingSpace = /\s$/.test(raw) && cleaned ? " " : "";
+  const limited = (cleaned + trailingSpace).slice(0, SEARCH_MAX_LENGTH);
+
+  if (limited !== raw) {
+    searchInput.value = limited;
+    return;
+  }
+  searchQuery.value = normalizeText(limited);
+});
+
+// Pasting replaces the previous search instead of being inserted into it
+// (and isn't blocked by maxlength when the box is already full).
+const handleSearchPaste = (event) => {
+  const pasted = event.clipboardData?.getData("text");
+  if (!pasted) return;
+  event.preventDefault();
+  searchInput.value = cleanText(pasted).slice(0, SEARCH_MAX_LENGTH);
+};
+
+// "all" | "Y" (active) | "N" (inactive)
+const statusFilter = ref("all");
+
 const isLoading = ref(false);
 const products = ref([]);
 
@@ -309,13 +368,20 @@ const fetchProducts = async () => {
 };
 
 const filteredData = () => {
-  const q = searchQuery.value.trim().toLowerCase();
-  if (!q) return products.value;
-  return products.value.filter(
-    (p) =>
-      p?.ProductName?.toLowerCase().includes(q) ||
-      p?.ProductCode?.toLowerCase().includes(q)
-  );
+  const q = searchQuery.value;
+  const status = statusFilter.value;
+
+  return products.value.filter((p) => {
+    if (status !== "all" && (p?.Active ?? "") !== status) return false;
+    if (!q) return true;
+    // Partial, case-insensitive, whitespace-normalized
+    return [
+      p?.ProductCode,
+      p?.ProductName,
+      p?.category?.Category,
+      p?.category?.discount_type?.DiscountType,
+    ].some((field) => normalizeText(field).includes(q));
+  });
 };
 
 const paginatedData = () => {
@@ -323,7 +389,7 @@ const paginatedData = () => {
   return filteredData().slice(start, start + pageSize.value);
 };
 
-watch(searchQuery, () => {
+watch([searchQuery, statusFilter], () => {
   currentPage.value = 1;
 });
 
