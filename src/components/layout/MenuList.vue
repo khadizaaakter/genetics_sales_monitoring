@@ -58,6 +58,11 @@
           <span>Registered Dealer</span>
         </router-link>
       </a-menu-item>
+      <a-menu-item key="present_stock_summary">
+        <router-link :to="{ name: 'present_stock_summary' }">
+          <span>Present Stock Summary</span>
+        </router-link>
+      </a-menu-item>
     </a-sub-menu>
 
     <!-- user -->
@@ -66,10 +71,7 @@
         <span class="menu-group-title">User Management</span>
       </template>
 
-      <a-menu-item
-        v-if="hasPermission('User Manager')"
-        key="user-management"
-      >
+      <a-menu-item v-if="hasPermission('User Manager')" key="user-management">
         <router-link :to="{ name: 'user-management' }">
           <TeamOutlined />
           <span>User Manager</span>
@@ -82,10 +84,7 @@
         </router-link>
       </a-menu-item>
 
-      <a-menu-item
-        v-if="hasPermission('Permissions')"
-        key="user-permission"
-      >
+      <a-menu-item v-if="hasPermission('Permissions')" key="user-permission">
         <router-link :to="{ name: 'user-permission' }">
           <SafetyOutlined />
           <span>Permissions</span>
@@ -130,6 +129,7 @@ const routeToSubmenu = {
   "product-list": "settings",
   report: "reports",
   "registered-dealer": "reports",
+  present_stock_summary: "reports",
 };
 
 const user_permissions = ref(
@@ -144,11 +144,9 @@ const hasAnyPermission = (permissions) => {
   return permissions.some((p) => hasPermission(p));
 };
 
-const showMainMenu = () =>
-  hasAnyPermission(["Dashboard", "Product"]);
+const showMainMenu = () => hasAnyPermission(["Dashboard", "Product"]);
 
-const showUserMenu = () =>
-  hasAnyPermission(["User Manager", "Role", "Permissions"]);
+const showUserMenu = () => hasAnyPermission(["User Manager", "Role", "Permissions"]);
 
 const handleLogout = (router) => {
   Cookies.remove("token");

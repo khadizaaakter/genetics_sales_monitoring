@@ -31,7 +31,62 @@
         </div>
       </div>
 
-      <div class="flex flex-wrap items-center gap-3 mb-4">
+      <!-- Last user sync result -->
+      <div
+        v-if="syncStatus"
+        class="mt-4 rounded-lg border bg-white p-4"
+        :class="syncStatus.ok ? 'border-green-200' : 'border-red-200'"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="font-semibold text-gray-800">User Sync Status</span>
+            <a-tag :color="syncStatus.ok ? 'green' : 'red'" class="rounded-full px-3">
+              {{ syncStatus.ok ? "Success" : "Failed" }}
+            </a-tag>
+            <SyncOutlined v-if="isSyncing" spin class="text-gray-400" />
+          </div>
+          <span v-if="syncTimeLabel()" class="text-xs text-gray-500">
+            Last sync: {{ syncTimeLabel() }}
+          </span>
+        </div>
+
+        <p
+          v-if="syncStatus.message"
+          class="mt-1 mb-0 text-sm"
+          :class="syncStatus.ok ? 'text-gray-600' : 'text-red-600'"
+        >
+          {{ syncStatus.message }}
+        </p>
+
+        <div v-if="syncStatus.counts" class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="rounded-md bg-[#f8f9fc] px-4 py-3">
+            <div class="text-xs text-gray-500">Dealer Synced</div>
+            <div class="text-xl font-semibold text-gray-800">
+              {{ syncCounts().dealer }}
+            </div>
+          </div>
+          <div class="rounded-md bg-[#f8f9fc] px-4 py-3">
+            <div class="text-xs text-gray-500">MO Synced</div>
+            <div class="text-xl font-semibold text-gray-800">{{ syncCounts().mo }}</div>
+          </div>
+          <div class="rounded-md bg-[#f8f9fc] px-4 py-3">
+            <div class="text-xs text-gray-500">AM Synced</div>
+            <div class="text-xl font-semibold text-gray-800">{{ syncCounts().am }}</div>
+          </div>
+          <div class="rounded-md bg-[#f8f9fc] px-4 py-3">
+            <div class="text-xs text-gray-500">Dealer Status Updated</div>
+            <div class="text-xl font-semibold text-gray-800">
+              {{ syncCounts().dealerStatus }}
+            </div>
+          </div>
+        </div>
+
+        <p v-if="!syncStatus.ok && syncStatus.counts" class="mt-2 mb-0 text-xs text-gray-500">
+          Showing counts from the last successful sync.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3 mt-4 mb-4">
         <a-input-search
           v-model:value="searchInput"
           placeholder="Search by name, code, mobile..."
@@ -85,7 +140,7 @@
 
       <!-- Table -->
       <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-        <table class="min-w-full text-sm">
+        <table class="user-table min-w-full text-sm">
           <thead>
             <tr class="bg-[#f8f9fc] text-gray-600 font-semibold border-b border-gray-200">
               <th class="py-3 px-4 text-center w-16">SL</th>
@@ -773,6 +828,43 @@ const handleDelete = async (id) => {
 };
 const isSyncing = ref(false);
 
+// Last sync result, kept in localStorage so the card is still there after a
+// reload. Shape: { ok, message, at, counts: { dealer, mo, am, dealerStatus } }.
+// A failed sync only overwrites ok/message/at, so the counts of the last
+// successful sync stay visible.
+const SYNC_STATUS_KEY = "user_sync_status";
+const syncStatus = ref(null);
+
+const loadSyncStatus = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(SYNC_STATUS_KEY) || "null");
+    syncStatus.value = stored && typeof stored === "object" ? stored : null;
+  } catch (error) {
+    syncStatus.value = null;
+  }
+};
+
+const saveSyncStatus = (status) => {
+  syncStatus.value = status;
+  try {
+    localStorage.setItem(SYNC_STATUS_KEY, JSON.stringify(status));
+  } catch (error) {
+    // Storage full or blocked: the card still works for this session.
+  }
+};
+
+const toCount = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
+
+const syncCounts = () =>
+  syncStatus.value?.counts || { dealer: 0, mo: 0, am: 0, dealerStatus: 0 };
+
+const syncTimeLabel = () => {
+  const at = syncStatus.value?.at;
+  if (!at) return "";
+  const date = new Date(at);
+  return Number.isNaN(date.getTime()) ? "" : date.toLocaleString();
+};
+
 const handleSync = async () => {
   isSyncing.value = true;
 
@@ -784,23 +876,41 @@ const handleSync = async () => {
         "success",
         res.data.message || "User sync completed successfully."
       );
-      showNotification(
-        "info",
-        `Dealer Synced: ${res.data.dealer_synced}
-MO Synced: ${res.data.mo_synced}
-AM Synced: ${res.data.am_synced}`
-      );
+      // Replace the previous counts with the latest response.
+      saveSyncStatus({
+        ok: true,
+        message: res.data.message || "User sync completed successfully.",
+        at: new Date().toISOString(),
+        counts: {
+          dealer: toCount(res.data.dealer_synced),
+          mo: toCount(res.data.mo_synced),
+          am: toCount(res.data.am_synced),
+          dealerStatus: toCount(res.data.dealer_status_updated),
+        },
+      });
       fetchUserList();
     } else {
-      showNotification("error", res.data.message || "Failed to sync users.");
+      const message = res.data.message || "Failed to sync users.";
+      showNotification("error", message);
+      saveSyncStatus({
+        ...(syncStatus.value || {}),
+        ok: false,
+        message,
+        at: new Date().toISOString(),
+      });
     }
   } catch (error) {
     console.error(error);
 
-    showNotification(
-      "error",
-      error.response?.data?.message || error.message || "Failed to sync users."
-    );
+    const message =
+      error.response?.data?.message || error.message || "Failed to sync users.";
+    showNotification("error", message);
+    saveSyncStatus({
+      ...(syncStatus.value || {}),
+      ok: false,
+      message,
+      at: new Date().toISOString(),
+    });
   } finally {
     isSyncing.value = false;
   }
@@ -962,7 +1072,21 @@ watch(
 );
 
 onMounted(() => {
+  loadSyncStatus();
   fetchUserList();
   fetchRoles();
 });
 </script>
+
+<style scoped>
+/* Column dividers; the last column relies on the wrapper's border */
+.user-table th,
+.user-table td {
+  border-right: 1px solid #e5e7eb;
+}
+
+.user-table th:last-child,
+.user-table td:last-child {
+  border-right: none;
+}
+</style>

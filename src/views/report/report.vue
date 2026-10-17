@@ -1,9 +1,17 @@
 <template>
   <MainLayout>
     <div class="p-0">
-      <h1 class="text-2xl font-semibold text-gray-800 mb-1">
-        Dealer Wise LA Sales Report
-      </h1>
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+        <h1 class="text-2xl font-semibold text-gray-800">Dealer Wise LA Sales Report</h1>
+        <a-button
+          type="primary"
+          class="flex items-center gap-1 bg-[#2d2d61]"
+          :disabled="loading || !filteredRows().length"
+          @click="exportToExcel"
+        >
+          <FileExcelOutlined /> Export to Excel
+        </a-button>
+      </div>
 
       <!-- Filter bar -->
       <div
@@ -63,7 +71,7 @@
 
       <!-- Table -->
       <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-        <table class="min-w-full text-sm">
+        <table class="report-table min-w-full text-sm">
           <thead>
             <tr class="bg-[#f8f9fc] text-gray-600 font-semibold border-b border-gray-200">
               <th class="py-3 px-3 text-center w-12">SL</th>
@@ -167,6 +175,9 @@ import Cookies from "js-cookie";
 import MainLayout from "@/components/layout/MainLayout.vue";
 import { apiBase } from "@/config";
 import { showNotification } from "@/utilities/notification";
+import { FileExcelOutlined } from "@ant-design/icons-vue";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 // *Input is what the user is typing; *Query is the normalized value used for
 // filtering, updated live as the user types.
@@ -307,7 +318,92 @@ const loadReport = async () => {
   }
 };
 
+const toNumberOrBlank = (value) => {
+  const n = Number(value);
+  return value != null && value !== "" && Number.isFinite(n) ? n : "";
+};
+
+// Exports every row matching the current filters (all pages), plus a total row.
+const exportToExcel = () => {
+  const data = filteredRows();
+  if (!data.length) {
+    showNotification("warning", "No report data available to export.");
+    return;
+  }
+
+  try {
+    const excelData = data.map((r) => ({
+      "LA ID": r?.LAID ?? "",
+      LA: r?.LA ?? "",
+      "Buying Date": formatDate(r?.BuyingDate),
+      "Product Code": r?.ProductCode ?? "",
+      "Product Name": r?.ProductName ?? "",
+      Quantity: toNumberOrBlank(r?.Quantity),
+      Price: toNumberOrBlank(r?.Price),
+      Payment: toNumberOrBlank(r?.Payment),
+      Due: toNumberOrBlank(r?.Due),
+      Discount: toNumberOrBlank(r?.DiscountAmount),
+      "Bonus Qty": toNumberOrBlank(r?.BonusQty),
+    }));
+
+    excelData.push({
+      "LA ID": "",
+      LA: "",
+      "Buying Date": "",
+      "Product Code": "",
+      "Product Name": "Total",
+      Quantity: sumField("Quantity"),
+      Price: sumField("Price"),
+      Payment: sumField("Payment"),
+      Due: sumField("Due"),
+      Discount: sumField("DiscountAmount"),
+      "Bonus Qty": sumField("BonusQty"),
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    worksheet["!cols"] = [
+      { wch: 12 },
+      { wch: 25 },
+      { wch: 12 },
+      { wch: 14 },
+      { wch: 30 },
+      { wch: 12 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 12 },
+      { wch: 12 },
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Dealer Wise LA Sales");
+
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const file = new Blob([excelBuffer], {
+      type:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+    });
+    const range =
+      fromDate.value || toDate.value
+        ? `${fromDate.value || "start"}_to_${toDate.value || "end"}`
+        : new Date().toISOString().split("T")[0];
+    saveAs(file, `Dealer_Wise_LA_Sales_${range}.xlsx`);
+  } catch (error) {
+    showNotification("error", error?.message || "Failed to export report");
+  }
+};
+
 onMounted(() => {
   loadReport();
 });
 </script>
+
+<style scoped>
+.report-table th,
+.report-table td {
+  border-right: 1px solid #e5e7eb;
+}
+.report-table th:last-child,
+.report-table td:last-child {
+  border-right: none;
+}
+</style>

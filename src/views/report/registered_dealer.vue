@@ -49,7 +49,7 @@
 
       <!-- Table -->
       <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-        <table class="min-w-full text-sm">
+        <table class="dealer-table min-w-full text-sm">
           <thead>
             <tr class="bg-[#f8f9fc] text-gray-600 font-semibold border-b border-gray-200">
               <th class="py-3 px-3 text-center w-12">SL</th>
@@ -86,13 +86,13 @@
               :key="user.id ?? index"
               class="border-b border-gray-100 hover:bg-gray-50"
             >
-              <td class="py-2 px-3 text-center">
+              <td class="py-1 px-3 text-center">
                 {{ (currentPage - 1) * pageSize + index + 1 }}
               </td>
-              <td class="py-2 px-3">{{ user?.dealer_code || "-" }}</td>
-              <td class="py-2 px-3">{{ user?.name || "-" }}</td>
-              <td class="py-2 px-3">{{ user?.shop_name || "-" }}</td>
-              <td class="py-2 px-3">{{ user?.owner_name || "-" }}</td>
+              <td class="py-1 px-3">{{ user?.dealer_code || "-" }}</td>
+              <td class="py-1 px-3">{{ user?.name || "-" }}</td>
+              <td class="py-1 px-3">{{ user?.shop_name || "-" }}</td>
+              <td class="py-1 px-3">{{ user?.owner_name || "-" }}</td>
               <!-- <td class="text-center">
                 <a-tag
                   :color="user?.active === 'Y' ? 'green' : 'orange'"
@@ -101,9 +101,9 @@
                   {{ user?.active === "Y" ? "Yes" : "No" }}
                 </a-tag>
               </td> -->
-              <td class="py-2 px-3">{{ user?.email || "-" }}</td>
-              <td class="py-2 px-3">{{ user?.mobile || "-" }}</td>
-              <td class="py-2 px-3">{{ formatDate(user?.registration_date) }}</td>
+              <td class="py-1 px-3">{{ user?.email || "-" }}</td>
+              <td class="py-1 px-3">{{ user?.mobile || "-" }}</td>
+              <td class="py-1 px-3">{{ formatDate(user?.registration_date) }}</td>
             </tr>
           </tbody>
         </table>
@@ -263,3 +263,14 @@ const exportToExcel = () => {
   }
 };
 </script>
+
+<style scoped>
+.dealer-table th,
+.dealer-table td {
+  border-right: 1px solid #e5e7eb;
+}
+.dealer-table th:last-child,
+.dealer-table td:last-child {
+  border-right: none;
+}
+</style>

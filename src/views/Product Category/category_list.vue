@@ -42,7 +42,7 @@
 
       <!-- Table -->
       <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-        <table class="min-w-full text-sm">
+        <table class="category-table min-w-full text-sm">
           <thead>
             <tr class="bg-[#f8f9fc] text-gray-600 font-semibold border-b border-gray-200">
               <th class="py-3 px-4 text-center w-16">SL</th>
@@ -504,5 +504,16 @@ onMounted(() => {
 
 :deep(.ant-table-tbody > tr:hover > td) {
   background: #f9fafb !important;
+}
+
+/* Column dividers; the last column relies on the wrapper's border */
+.category-table th,
+.category-table td {
+  border-right: 1px solid #e5e7eb;
+}
+
+.category-table th:last-child,
+.category-table td:last-child {
+  border-right: none;
 }
 </style>

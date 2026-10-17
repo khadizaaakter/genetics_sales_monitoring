@@ -15,6 +15,7 @@ import Product_list from "./views/product/product_list.vue";
 import Dashboard from "./views/dashboard/dashboard.vue";
 import Report from "./views/report/report.vue";
 import RegisteredDealer from "./views/report/registered_dealer.vue";
+import PresentStockSummary from "./views/report/present_stock_summary.vue";
 
 const routes = [
   {
@@ -57,6 +58,11 @@ const routes = [
     path: "/report",
     name: "report",
     component: Report,
+  },
+  {
+    path: "/present_stock_summary",
+    name: "present_stock_summary",
+    component: PresentStockSummary,
   },
   {
     path: "/registered-dealer-report",
