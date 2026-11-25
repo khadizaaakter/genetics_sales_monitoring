@@ -1,8 +1,7 @@
 <template>
   <MainLayout>
     <div class="p-0">
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-        <h1 class="text-2xl font-semibold text-gray-800">Dealer Wise LA Sales Report</h1>
+      <div class="flex flex-wrap items-center justify-end gap-3 mb-1">
         <a-button
           type="primary"
           class="flex items-center gap-1 bg-[#2d2d61]"
@@ -74,12 +73,17 @@
         <table class="report-table min-w-full text-sm">
           <thead>
             <tr class="bg-[#f8f9fc] text-gray-600 font-semibold border-b border-gray-200">
-              <th class="py-3 px-3 text-center w-12">SL</th>
+              <th class="py-3 px-3 text-center w-17">SL</th>
               <th class="py-3 px-3 text-left">LA ID</th>
               <th class="py-3 px-3 text-left">LA</th>
               <th class="py-3 px-3 text-left">Buying Date</th>
               <th class="py-3 px-3 text-left">Product Code</th>
               <th class="py-3 px-3 text-left">Product Name</th>
+              <th class="py-3 px-3 text-left">Area</th>
+              <th class="py-3 px-3 text-left">MO</th>
+              <th class="py-3 px-3 text-left">Dealer</th>
+              <th class="py-3 px-3 text-left">LA</th>
+              <th class="py-3 px-3 text-left">Updated Date</th>
               <th class="py-3 px-3 text-right">Quantity</th>
               <th class="py-3 px-3 text-right">Price</th>
               <th class="py-3 px-3 text-right">Payment</th>
@@ -90,12 +94,12 @@
           </thead>
           <tbody class="text-gray-800">
             <tr v-if="loading">
-              <td colspan="12" class="py-6 text-center">
+              <td colspan="17" class="py-6 text-center">
                 <a-spin />
               </td>
             </tr>
             <tr v-else-if="!filteredRows().length">
-              <td colspan="12" class="py-6 text-center">
+              <td colspan="17" class="py-6 text-center">
                 <a-empty description="No records found" />
               </td>
             </tr>
@@ -112,6 +116,11 @@
               <td class="py-2 px-3">{{ formatDate(r.BuyingDate) }}</td>
               <td class="py-2 px-3">{{ r.ProductCode }}</td>
               <td class="py-2 px-3">{{ r.ProductName }}</td>
+              <td class="py-2 px-3">-</td>
+              <td class="py-2 px-3">-</td>
+              <td class="py-2 px-3">-</td>
+              <td class="py-2 px-3">-</td>
+              <td class="py-2 px-3">-</td>
               <td class="py-2 px-3 text-right">
                 {{ formatNumber(r.Quantity) }}
               </td>
@@ -130,7 +139,7 @@
           </tbody>
           <tfoot v-if="filteredRows().length">
             <tr class="bg-gray-50 font-semibold border-t border-gray-300">
-              <td class="py-3 px-3 text-right" colspan="6">Total</td>
+              <td class="py-3 px-3 text-right" colspan="11">Total</td>
               <td class="py-3 px-3 text-right">
                 {{ formatNumber(sumField("Quantity")) }}
               </td>

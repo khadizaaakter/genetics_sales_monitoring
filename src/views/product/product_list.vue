@@ -1,11 +1,8 @@
 <template>
   <MainLayout>
-    <div class="p-6">
+    <div class="p-0">
       <!-- Header -->
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 class="text-2xl font-semibold text-gray-800">Product List</h1>
-        </div>
+      <div class="flex flex-wrap items-center justify-end gap-3">
         <a-button
           type="primary"
           class="flex items-center gap-1 bg-[#2d2d61]"

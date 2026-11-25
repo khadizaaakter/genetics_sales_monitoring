@@ -13,6 +13,7 @@ import UpdatePermission from "./views/user/UpdatePermission.vue";
 import ProductCategory from "./views/Product Category/category_list.vue";
 import Product_list from "./views/product/product_list.vue";
 import Dashboard from "./views/dashboard/dashboard.vue";
+import LaInfoList from "./views/la/la_info_list.vue";
 import Report from "./views/report/report.vue";
 import RegisteredDealer from "./views/report/registered_dealer.vue";
 import PresentStockSummary from "./views/report/present_stock_summary.vue";
@@ -48,6 +49,11 @@ const routes = [
     path: "/product-list",
     name: "product-list",
     component: Product_list,
+  },
+  {
+    path: "/la-info",
+    name: "la-info",
+    component: LaInfoList,
   },
   {
     path: "/dashboard",

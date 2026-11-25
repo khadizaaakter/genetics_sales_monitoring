@@ -1,20 +1,16 @@
 <template>
   <MainLayout>
-    <div class="p-6">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 class="text-2xl font-semibold text-gray-800">User List</h1>
-        </div>
+    <div class="p-0">
+      <div class="flex flex-wrap items-center justify-end gap-3">
         <div class="flex flex-wrap items-center gap-2">
           <a-button
-            type="flex items-center gap-1 bg-blue-400 text-white border-blue-500 hover:!bg-blue-500 hover:!text-white hover:!border-blue-500"
-            class="flex items-center gap-1 bg-[#2d2d61]"
+            class="btn-tinted btn-export flex items-center gap-1"
             @click="exportToExcel"
           >
             <FileExcelOutlined /> Excel Export
           </a-button>
           <a-button
-            class="flex items-center gap-1 bg-purple-400 text-white border-purple-500 hover:!bg-purple-500 hover:!text-white hover:!border-purple-500"
+            class="btn-tinted btn-sync flex items-center gap-1"
             :disabled="isSyncing"
             @click="handleSync"
           >

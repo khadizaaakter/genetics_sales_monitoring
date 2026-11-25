@@ -1,8 +1,7 @@
 <template>
   <MainLayout>
     <div class="p-0">
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-        <h1 class="text-2xl font-semibold text-gray-800">Present Stock Summary</h1>
+      <div class="flex flex-wrap items-center justify-end gap-3 mb-1">
         <a-button
           type="primary"
           class="flex items-center gap-1 bg-[#2d2d61]"
