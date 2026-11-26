@@ -23,11 +23,20 @@
             :loading="f.loading"
             allow-clear
             show-search
-            option-filter-prop="label"
+            :filter-option="false"
             :dropdown-match-select-width="false"
             class="w-full"
+            @search="(q) => (filterSearch[f.key] = q)"
+            @dropdown-visible-change="(open) => !open && (filterSearch[f.key] = '')"
             @change="onFilterChange(f.key)"
-          />
+          >
+            <template #dropdownRender="{ menuNode }">
+              <component :is="menuNode" />
+              <div v-if="f.hidden" class="filters__limit">
+                Showing {{ MAX_FILTER_ITEMS }} of {{ f.total }} · type to search
+              </div>
+            </template>
+          </a-select>
         </div>
         <div class="filters__actions">
           <a-button
@@ -73,7 +82,7 @@
           </div>
 
           <div class="stat__foot">
-            <div class="stat__meta">
+            <div v-if="!c.noMeta" class="stat__meta">
               <template v-if="!c.loading">
                 <span :class="['trend', c.deltaCls]">
                   <component v-if="c.up !== null" :is="c.up ? CaretUpFilled : CaretDownFilled" />
@@ -110,13 +119,6 @@
             <span class="sec-icon sec-icon--grad"><BarChartOutlined /></span>
             Business Performance
           </h2>
-          <div class="biz__path">
-            <span class="biz__path-label">Hierarchy:</span>
-            <template v-for="(step, i) in HIERARCHY" :key="step">
-              <span v-if="i" class="biz__arrow">→</span>
-              <span class="biz__step">{{ step }}</span>
-            </template>
-          </div>
         </div>
 
         <div class="biz-grid">
@@ -174,7 +176,7 @@
                 <v-chart
                   class="biz-chart"
                   :style="{ height: barHeight(bizDealer.length) }"
-                  :init-options="{ renderer: 'svg' }"
+                  :init-options="SVG_INIT"
                   :option="dealerOption()"
                   autoresize
                 />
@@ -1070,8 +1072,6 @@ import { reactive, ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import dayjs from "dayjs";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
 import VChart from "vue-echarts";
 import { use } from "echarts/core";
 import { PieChart, LineChart, BarChart } from "echarts/charts";
@@ -1144,6 +1144,27 @@ use([
   CanvasRenderer,
   SVGRenderer, // Dealer-wise: full-height chart (thousands of rows) exceeds the canvas size limit
 ]);
+
+// One object for the template, so vue-echarts doesn't dispose + re-create the chart
+// on every render (it deep-watches init-options and re-inits on any new reference).
+const SVG_INIT = { renderer: "svg" };
+
+// Chart options: vue-echarts redraws the whole chart (setOption, notMerge) whenever
+// it gets a new option object. memoBy() returns the same object until one of its
+// sources changes by identity, so unrelated re-renders (loading flags, filter
+// typing, paging) no longer redraw the charts. Plain function, not computed().
+const memoBy = (sources, build) => {
+  let last = null;
+  let out;
+  return () => {
+    const now = sources();
+    if (!last || now.some((v, i) => v !== last[i])) {
+      last = now;
+      out = build();
+    }
+    return out;
+  };
+};
 
 // Backend endpoint that maps each dealer to its Area (Level2) and MO (Level1).
 // Expected: { status: "success", data: [{ dealer_code, area_code, area_name, mo_code, mo_name }] }
@@ -1418,30 +1439,62 @@ const FILTER_SP = {
   portfolio: { type: "PORTFOLIO", row: (r) => ({ value: String(r.CategoryID), label: r.Category }) },
   product: { type: "PRODUCT", row: (r) => ({ value: r.ProductCode, label: r.ProductName }) },
 };
+// The SP parameters for one list, from the current (not yet applied) filters.
+const filterParams = () => ({
+  am: filters.area || null,
+  mo: filters.mo || null,
+  dealer_code: filters.dealer || null,
+  category_id: filters.portfolio ? Number(filters.portfolio) : null,
+});
+
+// Lists already fetched during this visit, keyed by the exact request, so going
+// back to an earlier AM / MO / Dealer / Category (or Reset) needs no new request.
+// Failed requests are not cached.
+const filterCache = new Map();
+const cacheKey = (type, params) => JSON.stringify([type, params]);
+
 const filterSeq = {};
 const loadFilterOptions = async (key) => {
   const seq = (filterSeq[key] = (filterSeq[key] ?? 0) + 1);
+  const { type, row } = FILTER_SP[key];
+  const params = filterParams();
+  const ck = cacheKey(type, params);
+  if (filterCache.has(ck)) {
+    filterOpts[key] = filterCache.get(ck);
+    filterLoading[key] = false;
+    return;
+  }
   filterLoading[key] = true;
   try {
     const res = await axios.post(
       `${apiBase}/genetics_dashboard_filters`,
-      {
-        type: FILTER_SP[key].type,
-        am: filters.area || null,
-        mo: filters.mo || null,
-        dealer_code: filters.dealer || null,
-        category_id: filters.portfolio ? Number(filters.portfolio) : null,
-      },
+      { type, ...params },
       getTokenConfig()
     );
+    const opts = isOk(res) ? (res.data.data ?? []).map(row) : [];
+    if (isOk(res)) filterCache.set(ck, opts);
     if (seq !== filterSeq[key]) return;
-    filterOpts[key] = isOk(res) ? (res.data.data ?? []).map(FILTER_SP[key].row) : [];
+    filterOpts[key] = opts;
   } catch (err) {
     if (seq !== filterSeq[key]) return;
     filterOpts[key] = [];
   } finally {
     if (seq === filterSeq[key]) filterLoading[key] = false;
   }
+};
+
+// Each dropdown lists at most MAX_FILTER_ITEMS options; typing searches the full
+// list. The picked option always stays in the list so its label shows.
+const MAX_FILTER_ITEMS = 20;
+const filterSearch = reactive({ area: "", mo: "", dealer: "", la: "", product: "", portfolio: "" });
+const visibleOptions = (key) => {
+  const q = filterSearch[key].trim().toLowerCase();
+  const all = filterOpts[key];
+  const matches = q ? all.filter((o) => String(o.label).toLowerCase().includes(q)) : all;
+  const shown = matches.slice(0, MAX_FILTER_ITEMS);
+  const picked = all.find((o) => o.value === filters[key]);
+  if (picked && !shown.includes(picked)) shown.unshift(picked);
+  return { options: shown, total: matches.length, hidden: matches.length > MAX_FILTER_ITEMS };
 };
 
 const filterFields = () => {
@@ -1451,9 +1504,9 @@ const filterFields = () => {
     { key: "mo", label: "MO", placeholder: f.area ? "All MOs" : "Select AM first", disabled: !f.area },
     { key: "dealer", label: "Dealer", placeholder: f.mo ? "All Dealers" : "Select MO first", disabled: !f.mo },
     { key: "la", label: "LA", placeholder: f.dealer ? "All LAs" : "Select Dealer first", disabled: !f.dealer },
+    { key: "portfolio", label: "Categories", placeholder: "All Categories", disabled: false },
     { key: "product", label: "Product", placeholder: "All Products", disabled: false },
-    { key: "portfolio", label: "Portfolio", placeholder: "All Portfolios", disabled: false },
-  ].map((x) => ({ ...x, options: filterOpts[x.key], loading: filterLoading[x.key] }));
+  ].map((x) => ({ ...x, ...visibleOptions(x.key), loading: filterLoading[x.key] }));
 };
 
 // Changing a parent clears its children, then reloads the next level from the SP.
@@ -1465,6 +1518,7 @@ const CHILDREN = {
 };
 const NEXT_LEVEL = { area: "mo", mo: "dealer", dealer: "la" };
 const onFilterChange = (key) => {
+  filterSearch[key] = "";
   for (const child of CHILDREN[key] ?? []) {
     filters[child] = undefined;
     if (child !== "product") filterOpts[child] = [];
@@ -1473,9 +1527,42 @@ const onFilterChange = (key) => {
   if (next && filters[key]) loadFilterOptions(next);
   if (key === "portfolio") loadFilterOptions("product");
 };
-// Lists that need no parent: AM, Portfolio, Product
-const loadRootFilterOptions = () =>
-  Promise.all([loadFilterOptions("area"), loadFilterOptions("portfolio"), loadFilterOptions("product")]);
+// Lists that need no parent: AM, Portfolio, Product — fetched in one request
+// (`types`), each with the same parameters a single-list request would send.
+const ROOT_FILTERS = ["area", "portfolio", "product"];
+const loadRootFilterOptions = async () => {
+  const params = filterParams();
+  const seqs = {};
+  for (const k of ROOT_FILTERS) {
+    seqs[k] = filterSeq[k] = (filterSeq[k] ?? 0) + 1;
+    filterLoading[k] = true;
+  }
+  let sets = null;
+  try {
+    const res = await axios.post(
+      `${apiBase}/genetics_dashboard_filters`,
+      { types: ROOT_FILTERS.map((k) => FILTER_SP[k].type), ...params },
+      getTokenConfig()
+    );
+    const data = res?.data?.data;
+    if (isOk(res) && data && !Array.isArray(data)) sets = data;
+  } catch (err) {
+    sets = null;
+  }
+  // Older API without `types`: fall back to one request per list.
+  if (!sets) {
+    await Promise.all(ROOT_FILTERS.map((k) => loadFilterOptions(k)));
+    return;
+  }
+  for (const k of ROOT_FILTERS) {
+    const { type, row } = FILTER_SP[k];
+    const opts = (sets[type] ?? []).map(row);
+    filterCache.set(cacheKey(type, params), opts);
+    if (seqs[k] !== filterSeq[k]) continue;
+    filterOpts[k] = opts;
+    filterLoading[k] = false;
+  }
+};
 
 const sameDay = (a, b) => a && b && a.isSame(b, "day");
 
@@ -1613,7 +1700,7 @@ const repeatParts = () => [
 ];
 const hasBuyers = () => repeatParts().some((p) => num(p.count) > 0);
 
-const repeatOption = () => {
+const repeatOption = memoBy(() => [laSeg.value], () => {
   const parts = repeatParts();
   return {
     tooltip: {
@@ -1640,7 +1727,7 @@ const repeatOption = () => {
       },
     ],
   };
-};
+});
 
 // ---------------- Portfolio Contribution (SP portfolio, RS3) ----------------
 // SP NULLs stay null and show as "-".
@@ -2315,7 +2402,7 @@ const normalizeBizDealer = (r) => ({
 const areaGrowthText = (a) => growthText(a.raw.GrowthPct);
 
 // Horizontal bars, one color per area, growth chip at the bar end
-const areaOption = () => {
+const areaOption = memoBy(() => [bizArea.value], () => {
   const list = bizArea.value;
   return {
     // No fixed right margin: growth is its own axis column, and the x-axis
@@ -2399,10 +2486,10 @@ const areaOption = () => {
       },
     ],
   };
-};
+});
 
 // Columns = sales, line = collection % on its own 0–100 axis
-const moOption = () => {
+const moOption = memoBy(() => [bizMo.value], () => {
   const list = bizMo.value;
   return {
     grid: { left: 4, right: 4, top: 22, bottom: 0, containLabel: true },
@@ -2511,13 +2598,13 @@ const moOption = () => {
       },
     ],
   };
-};
+});
 
 // Sales bar per dealer; the SP has no collected amount per dealer, so no split.
 // The SP returns every dealer (thousands). Like Area-wise, the chart is drawn
 // at full height and the .biz-scroll box scrolls it with the native scrollbar.
 // It renders as SVG (see template): a canvas that tall exceeds browser limits.
-const dealerOption = () => {
+const dealerOption = memoBy(() => [bizDealer.value], () => {
   const list = bizDealer.value;
   return {
     grid: { left: 4, right: 4, top: 4, bottom: 4, containLabel: true },
@@ -2579,7 +2666,7 @@ const dealerOption = () => {
       },
     ],
   };
-};
+});
 
 // Clicking a bar narrows the whole dashboard to it.
 const filterBy = (key, value) => {
@@ -3009,7 +3096,7 @@ const agingBars = () =>
       c: AGING_COLORS[i % AGING_COLORS.length],
     }));
 const hasAgingDue = () => dueAging.value.some((r) => num(r.DueAmount) > 0);
-const agingOption = () => {
+const agingOption = memoBy(() => [dueAging.value], () => {
   const bars = agingBars();
   return {
     grid: { left: 4, right: 4, top: 44, bottom: 4, containLabel: true },
@@ -3083,7 +3170,7 @@ const agingOption = () => {
       },
     ],
   };
-};
+});
 
 const STOCK_COLS = [
   { key: "name", title: "Dealer", type: "text" },
@@ -3575,12 +3662,12 @@ const kpiDelta = (d, goodWhenUp = true, unit = "%") => {
 const kpiSpark = (col) =>
   col ? kpiTrend.value.map((r) => num(r[col])) : [];
 const KPI_CARDS = [
-  { key: "dealers", label: "Total Dealers", field: "TotalDealers", delta: "TotalDealers_GrowthPct", icon: ShopOutlined, c1: "#3b82f6", c2: "#1d4ed8" },
+  { key: "dealers", label: "Total Dealers", field: "TotalDealers", noMeta: true, delta: "TotalDealers_GrowthPct", icon: ShopOutlined, c1: "#3b82f6", c2: "#1d4ed8" },
   { key: "activeDealers", label: "Active Dealers", field: "ActiveDealers", delta: "ActiveDealers_GrowthPct", spark: "ActiveDealers", icon: TeamOutlined, c1: "#8b5cf6", c2: "#6d28d9" },
   { key: "activeLas", label: "Active LAs", field: "ActiveLAs", delta: "ActiveLAs_GrowthPct", spark: "ActiveLAs", icon: EnvironmentOutlined, c1: "#10b981", c2: "#047857" },
   { key: "collection", label: "Collection %", field: "CollectionPct", suffix: "%", delta: "CollectionPct_ChangePts", unit: " pts", spark: "CollectionPct", icon: WalletOutlined, c1: "#84cc16", c2: "#4d7c0f" },
   { key: "due", label: "Outstanding Due", field: "OutstandingDue", prefix: "৳ ", delta: "OutstandingDue_GrowthPct", goodWhenUp: false, icon: ExclamationCircleOutlined, c1: "#eab308", c2: "#a16207" },
-  { key: "stock", label: "Current Stock", field: "CurrentStock", suffix: " Units", delta: "CurrentStock_GrowthPct", icon: InboxOutlined, c1: "#6366f1", c2: "#4338ca" },
+  { key: "stock", label: "Current Stock", field: "CurrentStock", suffix: " Units", noMeta: true, delta: "CurrentStock_GrowthPct", icon: InboxOutlined, c1: "#6366f1", c2: "#4338ca" },
   { key: "appUsers", label: "Active App Users", field: "ActiveAppUsers", delta: "ActiveAppUsers_GrowthPct", icon: MobileOutlined, c1: "#14b8a6", c2: "#0f766e" },
 ];
 const statCards = () => {
@@ -4321,7 +4408,7 @@ const visibleRows = (layer) => {
 // =====================================================================
 // Excel export — filtered sales lines plus district / product summaries
 // =====================================================================
-const sheetOf = (rows, widths) => {
+const sheetOf = (XLSX, rows, widths) => {
   const ws = XLSX.utils.json_to_sheet(rows);
   ws["!cols"] = widths.map((wch) => ({ wch }));
   return ws;
@@ -4331,8 +4418,7 @@ const appliedFilterRows = () => {
   const optionLabel = (key) => {
     const value = applied[key];
     if (!value) return "All";
-    const field = filterFields().find((f) => f.key === key);
-    return field?.options.find((o) => o.value === value)?.label ?? value;
+    return filterOpts[key].find((o) => o.value === value)?.label ?? value;
   };
   return [
     { Filter: "Date Range", Value: periodLabel() },
@@ -4366,7 +4452,7 @@ const EXPORT_SHEETS = [
   ["lower", "dueAging", "Due Aging"],
   ["lower", "topDueDealers", "Top Due Dealers"],
 ];
-const exportExcel = () => {
+const exportExcel = async () => {
   const sets = { main: lastMainSets, lower: lastLowerSets };
   const sheets = EXPORT_SHEETS.map(([src, key, name]) => [sets[src][key] ?? [], name]).filter(
     ([rows]) => rows.length
@@ -4376,11 +4462,13 @@ const exportExcel = () => {
     return;
   }
   try {
+    // Loaded on first export only, so they stay out of the dashboard's initial bundle.
+    const [XLSX, { saveAs }] = await Promise.all([import("xlsx"), import("file-saver")]);
     const wb = XLSX.utils.book_new();
     for (const [rows, name] of sheets) {
-      XLSX.utils.book_append_sheet(wb, sheetOf(rows, Object.keys(rows[0]).map(() => 18)), name);
+      XLSX.utils.book_append_sheet(wb, sheetOf(XLSX, rows, Object.keys(rows[0]).map(() => 18)), name);
     }
-    XLSX.utils.book_append_sheet(wb, sheetOf(appliedFilterRows(), [14, 40]), "Filters");
+    XLSX.utils.book_append_sheet(wb, sheetOf(XLSX, appliedFilterRows(), [14, 40]), "Filters");
 
     const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     const file = new Blob([buffer], {
@@ -4459,6 +4547,14 @@ onMounted(loadAll);
   font-size: 12px;
   font-weight: 600;
   color: var(--ink);
+}
+/* "Showing 20 of N" hint under a filter dropdown's list */
+.filters__limit {
+  padding: 6px 12px 4px;
+  font-size: 11px;
+  color: #8c8c8c;
+  border-top: 1px solid #f0f0f0;
+  margin-top: 4px;
 }
 .filters__actions {
   display: flex;

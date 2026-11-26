@@ -4,19 +4,21 @@ import Cookies from "js-cookie";
 import Login from "./views/Login.vue";
 // import UpdatePassword from "./vews/UpdatePassword.vue";
 
-import UserManagement from "./views/user/UserManagement.vue";
-import Permission from "./views/user/Permission.vue";
-import Role from "./views/user/Role.vue";
-import EditRole from "./views/user/EditRole.vue";
-import EditUser from "./views/user/EditUser.vue";
-import UpdatePermission from "./views/user/UpdatePermission.vue";
-import ProductCategory from "./views/Product Category/category_list.vue";
-import Product_list from "./views/product/product_list.vue";
-import Dashboard from "./views/dashboard/dashboard.vue";
-import LaInfoList from "./views/la/la_info_list.vue";
-import Report from "./views/report/report.vue";
-import RegisteredDealer from "./views/report/registered_dealer.vue";
-import PresentStockSummary from "./views/report/present_stock_summary.vue";
+// Every page except Login is loaded on first visit, so the app only downloads
+// the code (charts, Excel, etc.) of the page being opened.
+const UserManagement = () => import("./views/user/UserManagement.vue");
+const Permission = () => import("./views/user/Permission.vue");
+const Role = () => import("./views/user/Role.vue");
+const EditRole = () => import("./views/user/EditRole.vue");
+const EditUser = () => import("./views/user/EditUser.vue");
+const UpdatePermission = () => import("./views/user/UpdatePermission.vue");
+const ProductCategory = () => import("./views/Product Category/category_list.vue");
+const Product_list = () => import("./views/product/product_list.vue");
+const Dashboard = () => import("./views/dashboard/dashboard.vue");
+const LaInfoList = () => import("./views/la/la_info_list.vue");
+const Report = () => import("./views/report/report.vue");
+const RegisteredDealer = () => import("./views/report/registered_dealer.vue");
+const PresentStockSummary = () => import("./views/report/present_stock_summary.vue");
 
 const routes = [
   {
